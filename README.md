@@ -31,3 +31,7 @@ __average_profiles.py__ Averages the output profiles.
 
 __nodes-selection.py__ Selects the fluid nodes. 
 
+**Specific scripts used in covariances.job and configurations.job**
+-----------------------------------------------------------------
+__average-results.py__ Averages the covariances. 
+
