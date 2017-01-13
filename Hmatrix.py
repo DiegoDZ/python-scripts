@@ -149,7 +149,7 @@ nodes = number_nodes - (number_zeros_lower + number_zeros_upper)
 # Number snapshots
 number_snapshots = len(densityFluid)
 
-# Subtract the last row (system in equilibrium) to all rows: fluctuation of the CG variables.
+# Subtract the last row (system in equilibrium) to all rows: fluctuation of CG variables.
 densityFluid = densityFluid - densityFluid[number_snapshots-1,:]
 internalEnergyFluid = internalEnergyFluid - internalEnergyFluid[number_snapshots-1,:]
 centerOfMassUpperWall = centerOfMassUpperWall - centerOfMassUpperWall[number_snapshots-1,:]
@@ -182,25 +182,26 @@ mu = mu_term_density + mu_term_energy + mu_term_cmUpper + mu_term_cmLower + mu_t
 ####
 # Compute terms of beta (temperature)
 ####
-beta_term_density = np.zeros((number_snapshots, nodes))
+#beta_term_density = np.zeros((number_snapshots, nodes))
 beta_term_energy = np.zeros((number_snapshots, nodes))
 for t in range(0, number_snapshots):
     for i in range(nodes, 2*nodes):
-        beta_term_density[t,i-nodes] = np.sum(H[i,0:nodes] * densityFluid[t,:].T)
+        #beta_term_density[t,i-nodes] = np.sum(H[i,0:nodes] * densityFluid[t,:].T)
         beta_term_energy[t,i-nodes] = np.sum(H[i, nodes:2*nodes] * internalEnergyFluid[t,:].T)
-beta_term_cmUpper = np.zeros((number_snapshots, nodes))
-beta_term_cmLower = np.zeros((number_snapshots, nodes))
+#beta_term_cmUpper = np.zeros((number_snapshots, nodes))
+#beta_term_cmLower = np.zeros((number_snapshots, nodes))
 beta_term_macroEnergyUpper = np.zeros((number_snapshots, nodes))
 beta_term_macroEnergyLower = np.zeros((number_snapshots, nodes))
 for i in range(nodes, 2*nodes):
-    beta_term_cmUpper[:,i-nodes] = H[i, 2*nodes] * centerOfMassUpperWall[:,2].T
-    beta_term_cmLower[:,i-nodes] = H[i, 2*nodes+1] * centerOfMassLowerWall[:,2].T
+    #beta_term_cmUpper[:,i-nodes] = H[i, 2*nodes] * centerOfMassUpperWall[:,2].T
+    #beta_term_cmLower[:,i-nodes] = H[i, 2*nodes+1] * centerOfMassLowerWall[:,2].T
     beta_term_macroEnergyUpper[:,i-nodes] = H[i, 2*nodes+2] * macroInternalEnergyUpperWall
     beta_term_macroEnergyLower[:,i-nodes] = H[i, 2*nodes+3] * macroInternalEnergyLowerWall
 # Sum terms
 #beta = beta_term_density + beta_term_energy + beta_term_cmUpper + beta_term_cmLower + beta_term_macroEnergyUpper + beta_term_macroEnergyLower
 betaFluid = beta_term_energy + beta_term_macroEnergyUpper + beta_term_macroEnergyLower
 betaFluid = np.asmatrix(betaFluid)
+betaFluid_inverse = 1/betaFluid
 
 ####
 # Compute terms of lambdaUpper
@@ -237,43 +238,47 @@ lambdaLower = lambdaLower_term_density + lambdaLower_term_energy + lambdaLower_t
 ####
 # Compute terms of betaUpper
 ####
-betaUpper_term_density = np.zeros(number_snapshots)
+#betaUpper_term_density = np.zeros(number_snapshots)
 betaUpper_term_energy = np.zeros(number_snapshots)
 for t in range(0, number_snapshots):
-     betaUpper_term_density[t] = np.sum(H[2*nodes+2, 0:nodes] * densityFluid[t,:].T)
+     #betaUpper_term_density[t] = np.sum(H[2*nodes+2, 0:nodes] * densityFluid[t,:].T)
      betaUpper_term_energy[t] = np.sum(H[2*nodes+2, nodes:2*nodes] * internalEnergyFluid[t,:].T)
-betaUpper_term_cmUpper = H[2*nodes+2, 2*nodes] * centerOfMassUpperWall[:,2].T
-betaUpper_term_cmLower = H[2*nodes+2, 2*nodes+1] * centerOfMassLowerWall[:,2].T
+#betaUpper_term_cmUpper = H[2*nodes+2, 2*nodes] * centerOfMassUpperWall[:,2].T
+#betaUpper_term_cmLower = H[2*nodes+2, 2*nodes+1] * centerOfMassLowerWall[:,2].T
 betaUpper_term_macroEnergyUpper = H[2*nodes+2, 2*nodes+2] * macroInternalEnergyUpperWall
 betaUpper_term_macroEnergyLower = H[2*nodes+2, 2*nodes+3] * macroInternalEnergyLowerWall
 # Sum terms
-betaUpper = betaUpper_term_density + betaUpper_term_energy + betaUpper_term_cmUpper + betaUpper_term_cmLower + betaUpper_term_macroEnergyUpper + betaUpper_term_macroEnergyLower
+#betaUpper = betaUpper_term_density + betaUpper_term_energy + betaUpper_term_cmUpper + betaUpper_term_cmLower + betaUpper_term_macroEnergyUpper + betaUpper_term_macroEnergyLower
+betaUpper = betaUpper_term_energy + betaUpper_term_macroEnergyUpper + betaUpper_term_macroEnergyLower
 
 ####
 # Compute terms of betaLower
 ####
-betaLower_term_density = np.zeros(number_snapshots)
+#betaLower_term_density = np.zeros(number_snapshots)
 betaLower_term_energy = np.zeros(number_snapshots)
 for t in range(0, number_snapshots):
-     betaLower_term_density[t] = np.sum(H[2*nodes+3, 0:nodes] * densityFluid[t,:].T)
+     #betaLower_term_density[t] = np.sum(H[2*nodes+3, 0:nodes] * densityFluid[t,:].T)
      betaLower_term_energy[t] = np.sum(H[2*nodes+3, nodes:2*nodes] * internalEnergyFluid[t,:].T)
-betaLower_term_cmUpper = H[2*nodes+3, 2*nodes] * centerOfMassUpperWall[:,2].T
-betaLower_term_cmLower = H[2*nodes+3, 2*nodes+1] * centerOfMassLowerWall[:,2].T
+#betaLower_term_cmUpper = H[2*nodes+3, 2*nodes] * centerOfMassUpperWall[:,2].T
+#betaLower_term_cmLower = H[2*nodes+3, 2*nodes+1] * centerOfMassLowerWall[:,2].T
 betaLower_term_macroEnergyUpper = H[2*nodes+3, 2*nodes+2] * macroInternalEnergyUpperWall
 betaLower_term_macroEnergyLower = H[2*nodes+3, 2*nodes+3] * macroInternalEnergyLowerWall
 # Sum terms
-betaLower = betaLower_term_density + betaLower_term_energy + betaLower_term_cmUpper + betaLower_term_cmLower + betaLower_term_macroEnergyUpper + betaLower_term_macroEnergyLower
+#betaLower = betaLower_term_density + betaLower_term_energy + betaLower_term_cmUpper + betaLower_term_cmLower + betaLower_term_macroEnergyUpper + betaLower_term_macroEnergyLower
+betaLower =  betaLower_term_energy + betaLower_term_macroEnergyUpper + betaLower_term_macroEnergyLower
 
 ###
 # Compute the term beta solid
 ###
 betaSolid = betaUpper_term_energy + betaLower_term_energy + betaUpper_term_macroEnergyUpper + betaUpper_term_macroEnergyLower + betaLower_term_macroEnergyUpper + betaLower_term_macroEnergyLower
 betaSolid = np.asmatrix(betaSolid)
+betaSolid_inverse = 1/betaSolid
+
 
 ###
 # Compute the term betaFinal as beta - betaSolid
 ###
-betaFinal = betaFluid - betaSolid.T #revisar. Hay que restar a cada columna de nodo la columna de betaSolid.
+betaFinal = betaFluid - betaSolid.T
 
 
 # Save terms
@@ -285,10 +290,10 @@ np.savetxt('mu_term_cmLower', mu_term_cmLower)
 np.savetxt('mu_term_macroEnergyUpper', mu_term_macroEnergyUpper)
 np.savetxt('mu_term_macroEnergyLower', mu_term_macroEnergyLower)
 """
-np.savetxt('beta_term_density', beta_term_density)
+#np.savetxt('beta_term_density', beta_term_density)
 np.savetxt('beta_term_energy', beta_term_energy)
-np.savetxt('beta_term_cmUpper', beta_term_cmUpper)
-np.savetxt('beta_term_cmLower', beta_term_cmLower)
+#np.savetxt('beta_term_cmUpper', beta_term_cmUpper)
+#np.savetxt('beta_term_cmLower', beta_term_cmLower)
 np.savetxt('beta_term_macroEnergyUpper', beta_term_macroEnergyUpper)
 np.savetxt('beta_term_macroEnergyLower', beta_term_macroEnergyLower)
 """
@@ -305,28 +310,30 @@ np.savetxt('lambdaLower_term_cmLower', lambdaLower_term_cmLower.T)
 np.savetxt('lambdaLower_term_macroEnergyUpper', lambdaLower_term_macroEnergyUpper.T)
 np.savetxt('lambdaLower_term_macroEnergyLower', lambdaLower_term_macroEnergyLower.T)
 """
-np.savetxt('betaUpper_term_density', betaUpper_term_density)
+#np.savetxt('betaUpper_term_density', betaUpper_term_density)
 np.savetxt('betaUpper_term_energy', betaUpper_term_energy)
-np.savetxt('betaUpper_term_cmUpper', betaUpper_term_cmUpper)
-np.savetxt('betaUpper_term_cmLower', betaUpper_term_cmLower.T)
-np.savetxt('betaUpper_term_macroEnergyUpper', betaUpper_term_macroEnergyUpper)
-np.savetxt('betaUpper_term_macroEnergyLower', betaUpper_term_macroEnergyLower)
-np.savetxt('betaLower_term_density', betaLower_term_density)
+#np.savetxt('betaUpper_term_cmUpper', betaUpper_term_cmUpper.T)
+#np.savetxt('betaUpper_term_cmLower', betaUpper_term_cmLower.T)
+np.savetxt('betaUpper_term_macroEnergyUpper', betaUpper_term_macroEnergyUpper.T)
+np.savetxt('betaUpper_term_macroEnergyLower', betaUpper_term_macroEnergyLower.T)
+#np.savetxt('betaLower_term_density', betaLower_term_density)
 np.savetxt('betaLower_term_energy', betaLower_term_energy)
-np.savetxt('betaLower_term_cmUpper', betaLower_term_cmUpper)
-np.savetxt('betaLower_term_cmLower', betaLower_term_cmUpper)
-np.savetxt('betaLower_term_macroEnergyUpper', betaLower_term_macroEnergyUpper)
-np.savetxt('betaLower_term_macroEnergyLower', betaLower_term_macroEnergyLower)
+#np.savetxt('betaLower_term_cmUpper', betaLower_term_cmUpper.T)
+#np.savetxt('betaLower_term_cmLower', betaLower_term_cmUpper.T)
+np.savetxt('betaLower_term_macroEnergyUpper', betaLower_term_macroEnergyUpper.T)
+np.savetxt('betaLower_term_macroEnergyLower', betaLower_term_macroEnergyLower.T)
 
 # Save conjugate variables (mu, beta, lambdaUpper, lambdaLower, betaUpper, betaLower)
 #np.savetxt('mu', mu)
 np.savetxt('betaFluid', betaFluid)
+np.savetxt('betaFluid_inverse', betaFluid_inverse)
 #np.savetxt('lambdaUpper', lambdaUpper)
 #np.savetxt('lambdaLower', lambdaLower)
-np.savetxt('betaUpper', betaUpper)
-np.savetxt('betaLower', betaLower)
-np.savetxt('betaSolid', betaSolid)
-np.savetxt('betaFinal', betaFinal) #revisar
+np.savetxt('betaUpper', betaUpper.T)
+np.savetxt('betaLower', betaLower.T)
+np.savetxt('betaSolid', betaSolid.T)
+np.savetxt('betaSolid_inverse', betaSolid_inverse.T)
+np.savetxt('betaFinal', betaFinal)
 
 # Move the outputs to a new folder named "conjugate_variables"
 #shutil.rmtree('./conjugate_variables')
@@ -336,5 +343,4 @@ if not os.path.exists(conjugate_variables):
 for f in os.listdir('./'):
     if (f.startswith('mu') or f.startswith('beta') or f.startswith('lambda')):
         shutil.move(f, conjugate_variables)
-
 #EOF
