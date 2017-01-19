@@ -27,7 +27,7 @@ covariance_density = np.zeros((number_nodes, number_nodes))
 covariance_densityInternalEnergy = np.zeros((number_nodes, number_nodes))
 covariance_internalEnergy = np.zeros((number_nodes, number_nodes))
 covariance_internalEnergyDensity = np.zeros((number_nodes, number_nodes))
-# Create arrays for outputs. Vectors. 
+# Create arrays for outputs. Vectors.
 covariance_densityCenterOfMassUpperWall = np.zeros(number_nodes)
 covariance_internalEnergyCenterOfMassUpperWall = np.zeros(number_nodes)
 covariance_densityCenterOfMassLowerWall = np.zeros(number_nodes)
@@ -36,15 +36,22 @@ covariance_densityMacroInternalEnergyUpperWall = np.zeros(number_nodes)
 covariance_internalEnergyMacroInternalEnergyUpperWall = np.zeros(number_nodes)
 covariance_densityMacroInternalEnergyLowerWall = np.zeros(number_nodes)
 covariance_internalEnergyMacroInternalEnergyLowerWall = np.zeros(number_nodes)
-covariance_centerOfMassLowerWallDensity = np.zeros(number_nodes) 
-covariance_centerOfMassUpperWallDensity= np.zeros(number_nodes) 
+covariance_centerOfMassLowerWallDensity = np.zeros(number_nodes)
+covariance_centerOfMassUpperWallDensity= np.zeros(number_nodes)
 covariance_macroInternalEnergyLowerWallDensity = np.zeros(number_nodes)
 covariance_macroInternalEnergyUpperWallDensity = np.zeros(number_nodes)
 covariance_centerOfMassLowerWallInternalEnergy = np.zeros(number_nodes)
 covariance_centerOfMassUpperWallInternalEnergy = np.zeros(number_nodes)
 covariance_macroInternalEnergyLowerWallInternalEnergy = np.zeros(number_nodes)
 covariance_macroInternalEnergyUpperWallInternalEnergy = np.zeros(number_nodes)
-# Create array one component. Numbers. 
+
+
+covariance_densityMacroInternalEnergyWall = np.zeros(number_nodes)
+covariance_macroInternalEnergyWallDensity = np.zeros(number_nodes)
+covariance_internalEnergyMacroInternalEnergyWall = np.zeros(number_nodes)
+covariance_macroInternalEnergyWallInternalEnergy = np.zeros(number_nodes)
+
+# Create array one component. Numbers.
 covariance_centerOfMassLowerWall = np.zeros(1)
 covariance_macroInternalEnergyLowerWall = np.zeros(1)
 covariance_macroInternalEnergyCenterOfMassLowerWall = np.zeros(1)
@@ -55,6 +62,8 @@ covariance_centerOfMassUpperLowerWall = np.zeros(1)
 covariance_macroInternalEnergyLowerWallCenterOfMassUpperWall = np.zeros(1)
 covariance_macroInternalEnergyUpperWallCenterOfMassLowerWall = np.zeros(1)
 covariance_macroInternalEnergyUpperLowerWall = np.zeros(1)
+
+covariance_macroInternalEnergyWall = np.zeros(1)
 
 for file_name in os.listdir('./'):
     if file_name[0:1] == "A":
@@ -117,7 +126,17 @@ for file_name in os.listdir('./'):
         covariance_macroInternalEnergyUpperWallCenterOfMassLowerWall += np.loadtxt(file_name) / number_simulations
     elif file_name[0:1] == "d":
         covariance_macroInternalEnergyUpperLowerWall += np.loadtxt(file_name) / number_simulations
-   
+    elif file_name[0:1] == "h":
+        covariance_densityMacroInternalEnergyWall += np.loadtxt(file_name) / number_simulations
+    elif file_name[0:1] == "i":
+        covariance_macroInternalEnergyWallDensity += np.loadtxt(file_name) / number_simulations
+    elif file_name[0:1] == "j":
+        covariance_internalEnergyMacroInternalEnergyWall += np.loadtxt(file_name) / number_simulations
+    elif file_name[0:1] == "k":
+        covariance_macroInternalEnergyWallInternalEnergy += np.loadtxt(file_name) / number_simulations
+    elif file_name[0:1] == "l":
+        covariance_macroInternalEnergyWall = np.loadtxt(file_name) / number_simulations
+
 # Save output
 
 np.savetxt('covariance_density', covariance_density)
@@ -151,5 +170,10 @@ np.savetxt('covariance_macroInternalEnergyLowerWallCenterOfMassUpperWall', covar
 np.savetxt('covariance_macroInternalEnergyUpperWallCenterOfMassLowerWall', covariance_macroInternalEnergyUpperWallCenterOfMassLowerWall)
 np.savetxt('covariance_macroInternalEnergyUpperLowerWall', covariance_macroInternalEnergyUpperLowerWall)
 
+np.savetxt('covariance_densityMacroInternalEnergyWall', covariance_densityMacroInternalEnergyWall)
+np.savetxt('covariance_macroInternalEnergyWallDensity', covariance_macroInternalEnergyWallDensity)
+np.savetxt('covariance_internalEnergyMacroInternalEnergyWall', covariance_internalEnergyMacroInternalEnergyWall)
+np.savetxt('covariance_macroInternalEnergyWallInternalEnergy', covariance_macroInternalEnergyWallInternalEnergy)
+np.savetxt('covariance_macroInternalEnergyWall', covariance_macroInternalEnergyWall)
 
 #EOF
