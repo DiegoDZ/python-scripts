@@ -15,10 +15,17 @@ __covariance_vv.py__ Computes the covariance between two input vectors. The outp
 
 __projected-current.py__ Computes the projected current of some relevant variables (internal energy of the fluid, heat fluxes and time derivative of the internal energy of the fluid)
 
-__Hmatrix.py__ Computes the matrix of covariances H. 
+__Hmatrix.py__ Computes the inverse of matrix of covariances C. Then calculates the conjugate variables. 
 
 __Mmatrix.py__ Computes the matrix M from K,L,N and S, and from the correlations between iLepsilon with iLepsilon.
 
+__Dmatrix.py__ Computes the matrix D using the Green-Kubo kernels. 
+
+__Hmatrix.py__ Computes the matrix of covariances C and the inverse H. 
+
+__model_rhoeTheory.py__ Computes the prediction of the evolution of the fluid density and the fluid energy based on a theory with fluid density and fluid energy as relevant variables.
+
+__model_eTheory.py__ Computes the prediction of the evolution of the fluid energy based on a theory with fluid energy as relevant variable.
 
 **Specific scripts used in correlation.job**
 --------------------------------------------

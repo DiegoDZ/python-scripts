@@ -38,7 +38,7 @@ cov_eQ = np.dot(cov_ee_inv, cov_eQ)
 cov_ePi = np.dot(cov_ee_inv, cov_ePi)
 
 #Compute projected currents
-e_avg = np.sum(e, axis = 0)
+e_avg = np.sum(e, axis = 0)/ number_snapshots
 E = e - e_avg
 
 for i in range (0, number_snapshots, 1):
