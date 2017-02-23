@@ -23,6 +23,12 @@ __Dmatrix.py__ Computes the matrix D using the Green-Kubo kernels.
 
 __Hmatrix.py__ Computes the matrix of covariances C and the inverse H. 
 
+__Ct-matrix.py__ Computes the matrix of covariances C(t). 
+
+__chopCt.py__ Chops the matrix of covariances C(t) selecting the column we are interested in. 
+
+__deriveCt.py__ Derives the matrix of covariances C(t). 
+
 __model_rhoeTheory.py__ Computes the prediction of the evolution of the fluid density and the fluid energy based on a theory with fluid density and fluid energy as relevant variables.
 
 __model_eTheory.py__ Computes the prediction of the evolution of the fluid energy based on a theory with fluid energy as relevant variable.
