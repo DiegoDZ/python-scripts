@@ -1,8 +1,8 @@
 ############################################################
-# This scripts creates a movie of time correlation functions
+# This scripts creates a movie of an input temporal matrix
 ############################################################
 #
-# run: >> movie-Dmatrix.py
+# run: >> movie-matrices.py
 #
 # Author: DiegoDZ
 # Date: Feb2017
@@ -18,9 +18,9 @@ import sys
 # Load file and define variables
 ################################
 #D = np.loadtxt('D_rhoeg')
-D = np.loadtxt('CtdevCtinv')
-setLimitz_upper = 40    # set limits of z axis
-setLimitz_lower = -40  # set limits of z axis
+D = np.loadtxt('Ctnorm')
+setLimitz_upper = 10    # set limits of z axis
+setLimitz_lower = -10  # set limits of z axis
 number_correlations_files = 9
 number_nodes = int(np.sqrt(len(D[0]) / number_correlations_files ))
 steps = len(D)
@@ -100,7 +100,7 @@ def animate(i, ha, fig):
     return wframe
 
 # Use FuncAnimation to create the movie using the frames.
-ani = animation.FuncAnimation(fig, animate, init_func = init, frames = 5, fargs=(ha, fig), interval = 1)
+ani = animation.FuncAnimation(fig, animate, init_func = init, frames = 20, fargs=(ha, fig), interval = 1)
 
 # Save the animation as an mp4
 #ani.save('animation-Dmatrix_5snapshots.mp4', fps=100, writer="avconv", codec="libx264")

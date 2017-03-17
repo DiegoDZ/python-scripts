@@ -26,6 +26,7 @@ D = np.zeros((steps, number_nodes ** 2 * number_correlations_files))
 Ctdev = np.zeros((steps-1, number_nodes ** 2 * number_correlations_files))
 Ct2dev = np.zeros((steps-1, number_nodes ** 2 * number_correlations_files))
 Ctinv = np.zeros((steps-1, number_nodes ** 2 * number_correlations_files))
+Ctnorm = np.zeros((steps-1, number_nodes ** 2 * number_correlations_files))
 CtdevCtinv = np.zeros((steps-1, number_nodes ** 2 * number_correlations_files)) #-1 porque no calculo estas variables en el ultimo paso de tiempo
 #Box length
 Lx = 17.3162
@@ -43,7 +44,7 @@ dt = 0.005
 #####################################################################################################################################
 
 ##############################################
-#COMPUTE C(t=0) and R(as Cinv(t=0))
+#COMPUTE C(t=0), R(as Cinv(t=0)) and C(t) normalized (as C(t)*R)at t = 0
 ##############################################
 #Select the block elements of the matrix C(t=0)
 Ct0_00 = np.asmatrix(Ct[0, 0:len(Ct[0])/number_correlations_files].reshape(number_nodes, number_nodes))
@@ -65,6 +66,13 @@ Ctinv0 = R
 Ctinv[0,:] = np.bmat((Ctinv0[0:number_nodes, 0:number_nodes].reshape(1,number_nodes**2), Ctinv0[0:number_nodes, number_nodes:2*number_nodes].reshape(1,number_nodes**2), Ctinv0[0:number_nodes, 2*number_nodes:3*number_nodes].reshape(1,number_nodes**2)\
                 , Ctinv0[number_nodes:2*number_nodes, 0:number_nodes].reshape(1,number_nodes**2), Ctinv0[number_nodes:2*number_nodes, number_nodes:2*number_nodes].reshape(1,number_nodes**2), Ctinv0[number_nodes:2*number_nodes,2*number_nodes:3*number_nodes].reshape(1,number_nodes**2)\
                     , Ctinv0[2*number_nodes:3*number_nodes, 0:number_nodes].reshape(1,number_nodes**2), Ctinv0[2*number_nodes:3*number_nodes, number_nodes:2*number_nodes].reshape(1,number_nodes**2), Ctinv0[2*number_nodes:3*number_nodes, 2*number_nodes:3*number_nodes].reshape(1,number_nodes**2)))
+#Calculate C(t) normalized
+Ctnorm0 = Ct0_stat.dot(R)
+#Change format: Matrix -> Vector
+Ctnorm[0,:] = np.bmat((Ctnorm0[0:number_nodes, 0:number_nodes].reshape(1,number_nodes**2), Ctnorm0[0:number_nodes, number_nodes:2*number_nodes].reshape(1,number_nodes**2), Ctnorm0[0:number_nodes, 2*number_nodes:3*number_nodes].reshape(1,number_nodes**2)\
+                , Ctnorm0[number_nodes:2*number_nodes, 0:number_nodes].reshape(1,number_nodes**2), Ctnorm0[number_nodes:2*number_nodes, number_nodes:2*number_nodes].reshape(1,number_nodes**2), Ctnorm0[number_nodes:2*number_nodes,2*number_nodes:3*number_nodes].reshape(1,number_nodes**2)\
+                    , Ctnorm0[2*number_nodes:3*number_nodes, 0:number_nodes].reshape(1,number_nodes**2), Ctnorm0[2*number_nodes:3*number_nodes, number_nodes:2*number_nodes].reshape(1,number_nodes**2), Ctnorm0[2*number_nodes:3*number_nodes, 2*number_nodes:3*number_nodes].reshape(1,number_nodes**2)))
+
 
 ##############################################
 #COMPUTE L as Cdev(t=0)
@@ -113,9 +121,9 @@ D[0,:] = np.bmat((D0[0:number_nodes, 0:number_nodes].reshape(1,number_nodes**2),
 #####################################################################################################################################
 
 for t in range(1, steps-1, 1):
-################
-# D(t)
-################
+#############
+#D(t)
+#############
     #Select the blocks of the matrix C(t)
     C_00 = np.asmatrix(Ct[t, 0:len(Ct[0])/number_correlations_files].reshape(number_nodes, number_nodes))
     C_01 = np.asmatrix(Ct[t, len(Ct[0])/number_correlations_files:2 * len(Ct[0])/number_correlations_files].reshape(number_nodes, number_nodes))
@@ -130,7 +138,6 @@ for t in range(1, steps-1, 1):
     C = np.bmat(([C_00, C_01, C_02],[C_10, C_11, C_12],[C_20, C_21, C_22]))
     #Calculate the inverse of C
     Cinv = linalg.pinv(C, rcond = 1e-12)
-
     #Select the blocks of the matrix C(t+dt)
     Cforward_00 = np.asmatrix(Ct[t+1, 0:len(Ct[0])/number_correlations_files].reshape(number_nodes, number_nodes))
     Cforward_01 = np.asmatrix(Ct[t+1, len(Ct[0])/number_correlations_files:2 * len(Ct[0])/number_correlations_files].reshape(number_nodes, number_nodes))
@@ -143,7 +150,7 @@ for t in range(1, steps-1, 1):
     Cforward_22 = np.asmatrix(Ct[t+1, 8*len(Ct[0])/number_correlations_files:9 * len(Ct[0])/number_correlations_files].reshape(number_nodes, number_nodes))
     #Create the matrix C at time t+dt
     Cforward = np.bmat(([Cforward_00, Cforward_01, Cforward_02],[Cforward_10, Cforward_11, Cforward_12],[Cforward_20, Cforward_21, Cforward_22]))
-    #Select the blocks of the matriz C(t-dt)
+    #Select the blocks of the matrix C(t-dt)
     Cbackward_00 = np.asmatrix(Ct[t-1, 0:len(Ct[0])/number_correlations_files].reshape(number_nodes, number_nodes))
     Cbackward_01 = np.asmatrix(Ct[t-1, len(Ct[0])/number_correlations_files:2 * len(Ct[0])/number_correlations_files].reshape(number_nodes, number_nodes))
     Cbackward_02 = np.asmatrix(Ct[t-1, 2*len(Ct[0])/number_correlations_files:3 * len(Ct[0])/number_correlations_files].reshape(number_nodes, number_nodes))
@@ -157,10 +164,8 @@ for t in range(1, steps-1, 1):
     Cbackward = np.bmat(([Cbackward_00, Cbackward_01, Cbackward_02],[Cbackward_10, Cbackward_11, Cbackward_12],[Cbackward_20, Cbackward_21, Cbackward_22]))
     #Derive C at time t
     Cdev = (Cforward - Cbackward) / (2 * dt)
-    #Increase the statistic
-    Cdev_stat = (Cdev - Cdev.T) / 2
     #Compute D matrix as -(Cdev(t) + L*R*C(t)) * Cinv(t)*Rinv
-    M = -np.asmatrix((Cdev_stat + L.dot(R).dot(C)).dot(Cinv).dot(Ct0_stat))
+    M = -np.asmatrix((Cdev + L.dot(R).dot(C)).dot(Cinv).dot(Ct0_stat))
     #Save it in matrix format
     D[t,:] = np.bmat((M[0:number_nodes, 0:number_nodes].reshape(1,number_nodes**2), M[0:number_nodes, number_nodes:2*number_nodes].reshape(1,number_nodes**2), M[0:number_nodes, 2*number_nodes:3*number_nodes].reshape(1,number_nodes**2)\
             , M[number_nodes:2*number_nodes, 0:number_nodes].reshape(1,number_nodes**2), M[number_nodes:2*number_nodes, number_nodes:2*number_nodes].reshape(1,number_nodes**2), M[number_nodes:2*number_nodes,2*number_nodes:3*number_nodes].reshape(1,number_nodes**2)\
@@ -172,12 +177,20 @@ for t in range(1, steps-1, 1):
             , C2dev[number_nodes:2*number_nodes, 0:number_nodes].reshape(1,number_nodes**2), C2dev[number_nodes:2*number_nodes, number_nodes:2*number_nodes].reshape(1,number_nodes**2), C2dev[number_nodes:2*number_nodes,2*number_nodes:3*number_nodes].reshape(1,number_nodes**2)\
                 , C2dev[2*number_nodes:3*number_nodes, 0:number_nodes].reshape(1,number_nodes**2), C2dev[2*number_nodes:3*number_nodes, number_nodes:2*number_nodes].reshape(1,number_nodes**2), C2dev[2*number_nodes:3*number_nodes, 2*number_nodes:3*number_nodes].reshape(1,number_nodes**2)))
 ################
+#C(t) normalized
+################
+    #Calculate C normalized and change format: Matrix -> Vector
+    Cnorm = C.dot(R)
+    Ctnorm[t,:] = np.bmat((Cnorm[0:number_nodes, 0:number_nodes].reshape(1,number_nodes**2), Cnorm[0:number_nodes, number_nodes:2*number_nodes].reshape(1,number_nodes**2), Cnorm[0:number_nodes, 2*number_nodes:3*number_nodes].reshape(1,number_nodes**2)\
+                    , Cnorm[number_nodes:2*number_nodes, 0:number_nodes].reshape(1,number_nodes**2), Cnorm[number_nodes:2*number_nodes, number_nodes:2*number_nodes].reshape(1,number_nodes**2), Cnorm[number_nodes:2*number_nodes,2*number_nodes:3*number_nodes].reshape(1,number_nodes**2)\
+                        , Cnorm[2*number_nodes:3*number_nodes, 0:number_nodes].reshape(1,number_nodes**2), Cnorm[2*number_nodes:3*number_nodes, number_nodes:2*number_nodes].reshape(1,number_nodes**2), Cnorm[2*number_nodes:3*number_nodes, 2*number_nodes:3*number_nodes].reshape(1,number_nodes**2)))
+################
 #Cdev(t)*Cinv(t)
 ################
     #Compute Cinv
     Cinv = linalg.pinv(C, rcond = 1e-12)
     #Compute the product Cdev(t)*Cinv(t)
-    P = Cdev_stat.dot(Cinv)
+    P = Cdev.dot(Cinv)
     #Save the product at each time step
     CtdevCtinv[t,:] = np.bmat((P[0:number_nodes, 0:number_nodes].reshape(1,number_nodes**2), P[0:number_nodes, number_nodes:2*number_nodes].reshape(1,number_nodes**2), P[0:number_nodes, 2*number_nodes:3*number_nodes].reshape(1,number_nodes**2)\
             , P[number_nodes:2*number_nodes, 0:number_nodes].reshape(1,number_nodes**2), P[number_nodes:2*number_nodes, number_nodes:2*number_nodes].reshape(1,number_nodes**2), P[number_nodes:2*number_nodes,2*number_nodes:3*number_nodes].reshape(1,number_nodes**2)\
@@ -187,9 +200,9 @@ for t in range(1, steps-1, 1):
             , Cinv[number_nodes:2*number_nodes, 0:number_nodes].reshape(1,number_nodes**2), Cinv[number_nodes:2*number_nodes, number_nodes:2*number_nodes].reshape(1,number_nodes**2), Cinv[number_nodes:2*number_nodes,2*number_nodes:3*number_nodes].reshape(1,number_nodes**2)\
                 , Cinv[2*number_nodes:3*number_nodes, 0:number_nodes].reshape(1,number_nodes**2), Cinv[2*number_nodes:3*number_nodes, number_nodes:2*number_nodes].reshape(1,number_nodes**2), Cinv[2*number_nodes:3*number_nodes, 2*number_nodes:3*number_nodes].reshape(1,number_nodes**2)))
     #Save the matrix Cdev at each time step
-    Ctdev[t,:] = np.bmat((Cdev_stat[0:number_nodes, 0:number_nodes].reshape(1,number_nodes**2), Cdev_stat[0:number_nodes, number_nodes:2*number_nodes].reshape(1,number_nodes**2), Cdev_stat[0:number_nodes, 2*number_nodes:3*number_nodes].reshape(1,number_nodes**2)\
-            , Cdev_stat[number_nodes:2*number_nodes, 0:number_nodes].reshape(1,number_nodes**2), Cdev_stat[number_nodes:2*number_nodes, number_nodes:2*number_nodes].reshape(1,number_nodes**2), Cdev_stat[number_nodes:2*number_nodes,2*number_nodes:3*number_nodes].reshape(1,number_nodes**2)\
-                , Cdev_stat[2*number_nodes:3*number_nodes, 0:number_nodes].reshape(1,number_nodes**2), Cdev_stat[2*number_nodes:3*number_nodes, number_nodes:2*number_nodes].reshape(1,number_nodes**2), Cdev_stat[2*number_nodes:3*number_nodes, 2*number_nodes:3*number_nodes].reshape(1,number_nodes**2)))
+    Ctdev[t,:] = np.bmat((Cdev[0:number_nodes, 0:number_nodes].reshape(1,number_nodes**2), Cdev[0:number_nodes, number_nodes:2*number_nodes].reshape(1,number_nodes**2), Cdev[0:number_nodes, 2*number_nodes:3*number_nodes].reshape(1,number_nodes**2)\
+            , Cdev[number_nodes:2*number_nodes, 0:number_nodes].reshape(1,number_nodes**2), Cdev[number_nodes:2*number_nodes, number_nodes:2*number_nodes].reshape(1,number_nodes**2), Cdev[number_nodes:2*number_nodes,2*number_nodes:3*number_nodes].reshape(1,number_nodes**2)\
+                , Cdev[2*number_nodes:3*number_nodes, 0:number_nodes].reshape(1,number_nodes**2), Cdev[2*number_nodes:3*number_nodes, number_nodes:2*number_nodes].reshape(1,number_nodes**2), Cdev[2*number_nodes:3*number_nodes, 2*number_nodes:3*number_nodes].reshape(1,number_nodes**2)))
 
 #####################################################################################################################################
 ############################################## COMPUTE FOR LAST TIME STEP ###########################################################
@@ -237,11 +250,12 @@ D7_integral = np.bmat(([M7_integral[0:10000].reshape(number_nodes,number_nodes),
 #####################################################################################################################################
 ###################################################### SAVE THE OUTPUT ##############################################################
 #####################################################################################################################################
-np.savetxt('D7_integral_rhoeg', D7_integral)
 np.savetxt('D_rhoeg', D)
+np.savetxt('D7_integral_rhoeg', D7_integral)
 np.savetxt('Ct0_rhoeg', Ct0_stat)
 np.savetxt('L_rhoeg',L_stat)
 np.savetxt('R_rhoeg', R)
+np.savetxt('Ctnorm', Ctnorm)
 np.savetxt('Ctinv', Ctinv)
 np.savetxt('Ctdev', Ctdev)
 np.savetxt('Ct2dev', Ct2dev)
