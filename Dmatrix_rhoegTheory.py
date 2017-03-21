@@ -180,7 +180,7 @@ for t in range(1, steps-1, 1):
 #C(t) normalized
 ################
     #Calculate C normalized and change format: Matrix -> Vector
-    Cnorm = C.dot(R)
+    Cnorm = R.dot(C)
     Ctnorm[t,:] = np.bmat((Cnorm[0:number_nodes, 0:number_nodes].reshape(1,number_nodes**2), Cnorm[0:number_nodes, number_nodes:2*number_nodes].reshape(1,number_nodes**2), Cnorm[0:number_nodes, 2*number_nodes:3*number_nodes].reshape(1,number_nodes**2)\
                     , Cnorm[number_nodes:2*number_nodes, 0:number_nodes].reshape(1,number_nodes**2), Cnorm[number_nodes:2*number_nodes, number_nodes:2*number_nodes].reshape(1,number_nodes**2), Cnorm[number_nodes:2*number_nodes,2*number_nodes:3*number_nodes].reshape(1,number_nodes**2)\
                         , Cnorm[2*number_nodes:3*number_nodes, 0:number_nodes].reshape(1,number_nodes**2), Cnorm[2*number_nodes:3*number_nodes, number_nodes:2*number_nodes].reshape(1,number_nodes**2), Cnorm[2*number_nodes:3*number_nodes, 2*number_nodes:3*number_nodes].reshape(1,number_nodes**2)))
