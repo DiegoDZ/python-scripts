@@ -99,6 +99,14 @@ Ctdev[0,:] = np.bmat((Ctdev0[0:number_nodes, 0:number_nodes].reshape(1,number_no
                     , Ctdev0[2*number_nodes:3*number_nodes, 0:number_nodes].reshape(1,number_nodes**2), Ctdev0[2*number_nodes:3*number_nodes, number_nodes:2*number_nodes].reshape(1,number_nodes**2), Ctdev0[2*number_nodes:3*number_nodes, 2*number_nodes:3*number_nodes].reshape(1,number_nodes**2)))
 
 #####################################
+#COMPUTE CtdevCtin AT t=0
+#####################################
+CtdevCtinv0 = L_stat.dot(R)
+CtdevCtinv[0,:] = np.bmat((CtdevCtinv0[0:number_nodes, 0:number_nodes].reshape(1,number_nodes**2), CtdevCtinv0[0:number_nodes, number_nodes:2*number_nodes].reshape(1,number_nodes**2), CtdevCtinv0[0:number_nodes, 2*number_nodes:3*number_nodes].reshape(1,number_nodes**2)\
+                , CtdevCtinv0[number_nodes:2*number_nodes, 0:number_nodes].reshape(1,number_nodes**2), CtdevCtinv0[number_nodes:2*number_nodes, number_nodes:2*number_nodes].reshape(1,number_nodes**2), CtdevCtinv0[number_nodes:2*number_nodes,2*number_nodes:3*number_nodes].reshape(1,number_nodes**2)\
+                    , CtdevCtinv0[2*number_nodes:3*number_nodes, 0:number_nodes].reshape(1,number_nodes**2), CtdevCtinv0[2*number_nodes:3*number_nodes, number_nodes:2*number_nodes].reshape(1,number_nodes**2), CtdevCtinv0[2*number_nodes:3*number_nodes, 2*number_nodes:3*number_nodes].reshape(1,number_nodes**2)))
+
+#####################################
 #COMPUTE THE SECOND DERIVATIVE OF C AT t=0
 #####################################
 Ct2dev0 = (Ct1 + Ct1.T - 2*Ct0_stat) / dt **2
@@ -243,7 +251,7 @@ for t in range(1, steps-1, 1):
 ############################################ COMPUTE THE INTEGRAL OF D ##############################################################
 #####################################################################################################################################
 M7_integral = np.sum(D[0:7,:], axis =0) * V * dt
-D7_integral = np.bmat(([M7_integral[0:10000].reshape(number_nodes,number_nodes), M7_integral[10000:20000].reshape(number_nodes,number_nodes), M7_integral[20000:30000].reshape(number_nodes,number_nodes)],[M7_integral[30000:40000].reshape(number_nodes,number_nodes), M7_integral[40000:50000].reshape(number_nodes,number_nodes), M7_integral[50000:60000].reshape(number_nodes,number_nodes)], [M7_integral[60000:70000].reshape(number_nodes,number_nodes), M7_integral[70000:80000].reshape(number_nodes,number_nodes), M7_integral[80000:90000].reshape(number_nodes,number_nodes)]))
+D7_integral = np.bmat(([M7_integral[0:number_nodes**2].reshape(number_nodes,number_nodes), M7_integral[number_nodes**2:2*number_nodes**2].reshape(number_nodes,number_nodes), M7_integral[2*number_nodes**2:3*number_nodes**2].reshape(number_nodes,number_nodes)],[M7_integral[3*number_nodes**2:4*number_nodes**2].reshape(number_nodes,number_nodes), M7_integral[4*number_nodes**2:5*number_nodes**2].reshape(number_nodes,number_nodes), M7_integral[5*number_nodes**2:6*number_nodes**2].reshape(number_nodes,number_nodes)], [M7_integral[6*number_nodes**2:7*number_nodes**2].reshape(number_nodes,number_nodes), M7_integral[7*number_nodes**2:8*number_nodes**2].reshape(number_nodes,number_nodes), M7_integral[8*number_nodes**2:9*number_nodes**2].reshape(number_nodes,number_nodes)]))
 #M7 = D[7,:]
 #D7 = np.bmat(([M7[0:10000].reshape(number_nodes,number_nodes), M7[10000:20000].reshape(number_nodes,number_nodes), M7[20000:30000].reshape(number_nodes,number_nodes)],[M7[30000:40000].reshape(number_nodes,number_nodes), M7[40000:50000].reshape(number_nodes,number_nodes), M7[50000:60000].reshape(number_nodes,number_nodes)], [M7[60000:70000].reshape(number_nodes,number_nodes), M7[70000:80000].reshape(number_nodes,number_nodes), M7[80000:90000].reshape(number_nodes,number_nodes)]))
 
