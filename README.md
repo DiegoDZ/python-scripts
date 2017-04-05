@@ -23,6 +23,8 @@ __Dmatrix.py__ Computes the matrix D using the Green-Kubo kernels.
 
 __Hmatrix.py__ Computes the matrix of covariances C and the inverse H. 
 
+__Mmatrix_rhoegTheory.py__ Computes the matrix M using Mori'exacts Generalized Langevin Equation 
+
 __Ct-matrix.py__ Computes the matrix of covariances C(t). 
 
 __chopCt.py__ Chops the matrix of covariances C(t) selecting the column we are interested in. 
