@@ -31,8 +31,8 @@ def crossCorrelation(arg1,arg2):
     a = np.zeros((nSteps, nNodes),dtype=complex)
     b = np.zeros((nSteps, nNodes),dtype=complex)
     for i in range(0,nNodes,1):
-        a[:,i] = np.fft.fft(A[:,i] - np.mean(A[:,i]))
-        b[:,i] = np.conjugate(np.fft.fft(B[:,i]- np.mean(B[:,i])))
+        a[:,i] = np.conjugate(np.fft.fft(A[:,i] - np.mean(A[:,i])))
+        b[:,i] = np.fft.fft(B[:,i]- np.mean(B[:,i]))
     #Multiply all columns of matrix a by all columns of matrix b.
     C = (a[...,None]*b[:,None]).reshape(a.shape[0],-1)
     #Calculate the inverse
