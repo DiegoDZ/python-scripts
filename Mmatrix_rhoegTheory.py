@@ -22,15 +22,18 @@ blocks = 9
 tol = 1e-3 #rcond in linalg.pinv
 steps = len(Ct)
 nodes = int(np.sqrt(len(Ct[0]) / blocks ))
-Mt = np.zeros((steps-1, nodes ** 2 * blocks))  #-1 because the script does not compute the values for the last time step
 Ctdev = np.zeros((steps-1, nodes ** 2 * blocks))
+intKt = np.zeros((steps-1, nodes ** 2 * blocks))
 Ctinv = np.zeros((steps-1, nodes ** 2 * blocks))
 Ctnorm = np.zeros((steps-1, nodes ** 2 * blocks))
 Ctnorminv = np.zeros((steps-1, nodes ** 2 * blocks))
 CtdevCtnorminv = np.zeros((steps-1, nodes ** 2 * blocks))
-#CtdevCtnorminvPlusL = np.zeros((steps-1, nodes ** 2 * blocks))
 CtdevCtinv = np.zeros((steps-1, nodes ** 2 * blocks))
-#Ct0CtinvCtdevT = np.zeros((steps-1, nodes ** 2 * blocks))
+Ft = np.zeros((steps-1, nodes ** 2 * blocks))
+Mt = np.zeros((steps-1, nodes ** 2 * blocks))
+MRt = np.zeros((steps-1, nodes ** 2 * blocks))
+#MRt_system = np.zeros((steps-1, nodes ** 2 * blocks))
+#error_MRt = np.zeros((steps-1, nodes ** 2 * blocks))
 #########Simulation details########
 #Box length
 Lx = 17.3162
@@ -77,7 +80,7 @@ R = linalg.pinv(Ct0_stat, rcond = tol)
 Ctinv0 = R
 Ctinv[0,:] = reshape_mv(Ctinv0)
 #########Compute C(t=0) normalized and its inverse########
-Ctnorm0 = Ct0_stat.dot(R)
+Ctnorm0 = R.dot(Ct0_stat)
 Ctnorminv0 = linalg.pinv(Ctnorm0, rcond = tol)
 Ctnorm[0,:] = reshape_mv(Ctnorm0)
 Ctnorminv[0,:] = reshape_mv(Ctnorminv0)
@@ -132,7 +135,11 @@ CtdevCtnorminv[0,:] = reshape_mv(CtdevCtnorminv0)
 CtdevCtinv0 = Ctdev0.dot(R)
 CtdevCtinv[0,:] = reshape_mv(CtdevCtinv0)
 
-
+#####################################
+#COMPUTE F  AT t=0
+#####################################
+Ft0 = Ctdev0 + L_stat.dot(R).dot(Ct0)
+Ft[0,:] = reshape_mv(Ft0)
 ############################################## COMPUTE FOR t >0 ###################################################################
 
 for t in range(1, steps-1, 1):
@@ -190,11 +197,31 @@ for t in range(1, steps-1, 1):
         Ctdev[t,:] = reshape_mv(Cdev)
 
     #####################################
+    # COMPUTE THE INTEGRAL OF K AS Ctdev(0) - Ctdev
+    #####################################
+        intK = Ctdev0 - Cdev
+        intKt[t,:] =  reshape_mv(intK)
+    #####################################
+    # COMPUTE F = Ctdev + L*R*C(t)
+    #####################################
+        F = Cdev + L_stat.dot(R).dot(C)
+        Ft[t,:] = reshape_mv(F)
+
+    #####################################
     # COMPUTE M(t)
     #####################################
-        #M = -np.asmatrix((Cdev.dot(Cnorminv) - Ctdev0))
-        M = -(Cdev.dot(Cnorminv) - Ctdev0)
+        #M = -(Cdev.dot(Cnorminv) - Ctdev0)
+        #Mt[t,:] = reshape_mv(M)
+        M = -F.dot(Cnorminv)
         Mt[t,:] = reshape_mv(M)
+        MR = -F.dot(Cinv)
+        MRt[t,:] = reshape_mv(MR)
+
+        #MR_systemT = linalg.lstsq(C.T,-F.T, tol)[0]
+        #MR_system = np.asmatrix(MR_systemT).T
+        #MRt_system[t,:] = reshape_mv(MR_system)
+        #error_MR = MR - MR_system
+        #error_MRt[t,:] = reshape_mv(error_MR)
 
     #####################################
     # COMPUTE Cdev(t) * Cnorminv(t) + L
@@ -219,22 +246,23 @@ for t in range(1, steps-1, 1):
 
 ############################################ COMPUTE THE INTEGRAL OF M ##############################################################
 
-M7_integral = np.sum(Mt[0:7,:], axis =0) * V * dt
-M7_integral = np.bmat(([M7_integral[0:nodes**2].reshape(nodes,nodes), M7_integral[nodes**2:2*nodes**2].reshape(nodes,nodes), M7_integral[2*nodes**2:3*nodes**2].reshape(nodes,nodes)],[M7_integral[3*nodes**2:4*nodes**2].reshape(nodes,nodes), M7_integral[4*nodes**2:5*nodes**2].reshape(nodes,nodes), M7_integral[5*nodes**2:6*nodes**2].reshape(nodes,nodes)], [M7_integral[6*nodes**2:7*nodes**2].reshape(nodes,nodes), M7_integral[7*nodes**2:8*nodes**2].reshape(nodes,nodes), M7_integral[8*nodes**2:9*nodes**2].reshape(nodes,nodes)]))
-
+#M7_integral = np.sum(Mt[0:7,:], axis =0) * V * dt
+#M7_integral = np.bmat(([M7_integral[0:nodes**2].reshape(nodes,nodes), M7_integral[nodes**2:2*nodes**2].reshape(nodes,nodes), M7_integral[2*nodes**2:3*nodes**2].reshape(nodes,nodes)],[M7_integral[3*nodes**2:4*nodes**2].reshape(nodes,nodes), M7_integral[4*nodes**2:5*nodes**2].reshape(nodes,nodes), M7_integral[5*nodes**2:6*nodes**2].reshape(nodes,nodes)], [M7_integral[6*nodes**2:7*nodes**2].reshape(nodes,nodes), M7_integral[7*nodes**2:8*nodes**2].reshape(nodes,nodes), M7_integral[8*nodes**2:9*nodes**2].reshape(nodes,nodes)]))
 
 ###################################################### SAVE THE OUTPUT ##############################################################
 
-np.savetxt('Mt_rhoeg', Mt)
-np.savetxt('M7_integral_rhoeg', M7_integral)
 np.savetxt('Ct0_rhoeg', Ct0_stat)
+np.savetxt('Ctdev', Ctdev)
+np.savetxt('intKt', intKt)
 np.savetxt('L_rhoeg',L_stat)
 np.savetxt('R_rhoeg', R)
-np.savetxt('Ctnorminv', Ctnorminv)
 np.savetxt('Ctnorm', Ctnorm)
 np.savetxt('Ctinv', Ctinv)
-np.savetxt('Ctdev', Ctdev)
+np.savetxt('Ctnorminv', Ctnorminv)
 np.savetxt('CtdevCtnorminv', CtdevCtnorminv)
-#np.savetxt('CtdevCtnorminvPlusL', CtdevCtnorminvPlusL)
-#np.savetxt('Ct0CtinvCtdevT', Ct0CtinvCtdevT)
+np.savetxt('Ft', Ft)
+np.savetxt('Mt_rhoeg', Mt)
+np.savetxt('MRt', MRt)
+#np.savetxt('MRt_system', MRt_system)
+#np.savetxt('error_MRt', error_MRt)
 #EOF
