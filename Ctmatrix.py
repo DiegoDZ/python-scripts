@@ -1,56 +1,49 @@
 ######################################################
-# This scripts computes the matrix of covariances C(t)
+# This scripts computes the matrix of correlations C(t)
 ######################################################
 
 #Author: DiegoDZ
 #Date: Feb 2017
-#Run: >> python Ct-matrix.py
+#Run: >> python Ctmatrix.py
 #################################################################################################
 #################################################################################################
 
 ##############################
 #Structure of C(t)
 ##############################
-#     | (t=1) corr_rhorho corr_rhoe corr_rhog corr_erho corr_ee corr_eg corr_grho corr_ge corr_gg|
-#     |    .                                                                                     |
-#C(t)=|    .                                                                                     |
-#     |    .                                                                                     |
-#     | (t=n) corr_rhorho corr_rhoe corr_rhog corr_erho corr_ee corr_eg corr_grho corr_ge corr_gg|
+#     | (t=1) c_rhorho c_rhoe c_rhog c_erho c_ee c_eg c_grho c_ge c_gg |
+#     |    .                                                           |
+#C(t)=|    .                                                           |
+#     |    .                                                           |
+#     | (t=n) c_rhorho c_rhoe c_rhog c_erho c_ee c_eg c_grho c_ge c_gg |
 ##############################
 ##############################
 
 import numpy as np
 
 # Load files
-corr_rhorho = np.loadtxt('corr_rhorho')
-corr_rhoe = np.loadtxt('corr_rhoe')
-corr_rhog = np.loadtxt('corr_rhog')
-#corr_rhoE = np.loadtxt('corr_rhoE')
-corr_erho = np.loadtxt('corr_erho')
-corr_ee = np.loadtxt('corr_ee')
-corr_eg = np.loadtxt('corr_eg')
-#corr_epsilonE = np.loadtxt('corr_epsilonE')
-corr_grho = np.loadtxt('corr_grho')
-corr_ge = np.loadtxt('corr_ge')
-corr_gg = np.loadtxt('corr_gg')
-#corr_gE = np.loadtxt('corr_gE')
-#corr_Erho = np.loadtxt('corr_Erho')
-#corr_Eepsilon = np.loadtxt('corr_Eepsilon')
-#corr_Eg = np.loadtxt('corr_Eg')
-#corr_EE = np.loadtxt('corr_EE')
+c_rhorho = np.loadtxt('c_rhorho.avgs.dat')
+c_rhoe   = np.loadtxt('c_rhoe.avgs.dat')
+c_rhog   = np.loadtxt('c_rhogz.avgs.dat')
+c_erho   = np.loadtxt('c_erho.avgs.dat')
+c_ee     = np.loadtxt('c_ee.avgs.dat')
+c_eg     = np.loadtxt('c_egz.avgs.dat')
+c_grho   = np.loadtxt('c_gzrho.avgs.dat')
+c_ge     = np.loadtxt('c_gze.avgs.dat')
+c_gg     = np.loadtxt('c_gzgz.avgs.dat')
 
 # Define variables and arrays
-number_correlations_files_rhoe = 4
-number_correlations_files_rhoeg = 9
-number_nodes = np.sqrt(len(corr_rhorho[0]))
-number_snapshots = len(corr_rhorho)
-Ct_rhoe = np.zeros((number_snapshots, number_correlations_files_rhoe * number_nodes ** 2))
-Ct_rhoeg = np.zeros((number_snapshots, number_correlations_files_rhoeg * number_nodes ** 2))
+blocks_rhoe = 4
+blocks_rhoeg = 9
+nodes = np.sqrt(len(c_rhorho[0]))
+steps = len(c_rhorho)
+Ct_rhoe = np.zeros((steps, blocks_rhoe * nodes ** 2))
+Ct_rhoeg = np.zeros((steps, blocks_rhoeg * nodes ** 2))
 
 # Concatenate the rows of the correlations files in order to create the matrix of correlations C(t)
-for i in range(number_snapshots):
-    Ct_rhoe[i,:] = np.hstack((corr_rhorho[i,:], corr_rhoe[i,:], corr_erho[i,:], corr_ee[i,:]))
-    Ct_rhoeg[i,:] = np.hstack((corr_rhorho[i,:], corr_rhoe[i,:], corr_rhog[i,:], corr_erho[i,:], corr_ee[i,:], corr_eg[i,:], corr_grho[i,:], corr_ge[i,:], corr_gg[i,:]))
+for i in range(steps):
+    Ct_rhoe[i,:] = np.hstack((c_rhorho[i,:], c_rhoe[i,:], c_erho[i,:], c_ee[i,:]))
+    Ct_rhoeg[i,:] = np.hstack((c_rhorho[i,:], c_rhoe[i,:], c_rhog[i,:], c_erho[i,:], c_ee[i,:], c_eg[i,:], c_grho[i,:], c_ge[i,:], c_gg[i,:]))
 
 # Save C(t) matrix
 np.savetxt('Ctmatrix_rhoe', Ct_rhoe)

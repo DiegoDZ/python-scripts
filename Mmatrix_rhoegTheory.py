@@ -61,7 +61,7 @@ def reshape_mv(A):
 ############################################## COMPUTES FOR t = 0 ###################################################################
 
 ##############################################
-#COMPUTE C(t=0), R(as Cinv(t=0)) and C(t) normalized (as C(t)*R) at t = 0
+#COMPUTE C(t=0), R(as Cinv(t=0)) and C(t) normalized (as R*C(t)) at t = 0
 ##############################################
 #########Create the matrix C(t=0)########
 Ct0_00 = np.asmatrix(Ct[0, 0:len(Ct[0])/blocks].reshape(nodes, nodes))

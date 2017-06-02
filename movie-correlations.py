@@ -18,8 +18,15 @@ import sys
 # Load file and define variables
 ################################
 inputFile = np.loadtxt(str(sys.argv[1]))
+#Limits for corr_rhorho
+#setLimitz_upper = 0.0005    # set limits of z axis
+#setLimitz_lower = -0.0005  # set limits of z axis
+#Limits for corr_ee
+#setLimitz_upper = 0.01    # set limits of z axis
+#setLimitz_lower = -0.002  # set limits of z axis
+#Limits for corr_gzgz
 setLimitz_upper = 0.001    # set limits of z axis
-setLimitz_lower = -0.0002  # set limits of z axis
+setLimitz_lower = -0.001  # set limits of z axis
 number_nodes = int(np.sqrt(len(inputFile[0])))
 steps = len(inputFile)
 X = range(0,number_nodes,1)
@@ -39,7 +46,7 @@ ha = fig.gca(projection='3d')
 
 def init():
     Z = out[0 : number_nodes, :]
-    wframe =ha.plot_surface(X, Y, Z, cmap='summer', rstride=3, cstride=3, alpha=0.5, linewidth=0.3)  # Creates the frame
+    wframe =ha.plot_surface(X, Y, Z, cmap='summer', rstride=1, cstride=1, alpha=0.5, linewidth=0.3)  # Creates the frame
     return wframe
 
 ###################
@@ -48,16 +55,16 @@ def init():
 def animate(i, ha, fig):
     ha.cla() # Clear axis
     Z = out[number_nodes * i : (i + 1) * number_nodes, :]
-    wframe =ha.plot_surface(X, Y, Z, cmap='summer', rstride=3, cstride=3, alpha=0.5, linewidth=0.3,)
+    wframe =ha.plot_surface(X, Y, Z, cmap='summer', rstride=1, cstride=1, alpha=0.5, linewidth=0.3,)
     # Customize axis
     ha.set_xlabel('Nodes')
     ha.set_ylabel('Nodes')
-    ha.set_zlabel('')
+    ha.set_zlabel('Step' + str(i))
     ha.set_zlim(setLimitz_lower, setLimitz_upper)   #Set the limits of z axis.
     return wframe
 
 # Use FuncAnimation to create the movie using the frames.
-ani = animation.FuncAnimation(fig, animate, init_func = init, frames = 500, fargs=(ha, fig), interval = 1)
+ani = animation.FuncAnimation(fig, animate, init_func = init, frames = range(1,10000,10), fargs=(ha, fig), interval = 1)
 
 # Save the animation as an mp4
 #ani.save('animation-corr.mp4', fps=30, writer="avconv", codec="libx264")

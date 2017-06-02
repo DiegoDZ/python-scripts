@@ -17,10 +17,41 @@ import sys
 ################################
 # Load file and define variables
 ################################
-#D = np.loadtxt('D_rhoeg')
-D = np.loadtxt('Ctnorm')
-setLimitz_upper = 10    # set limits of z axis
-setLimitz_lower = -10  # set limits of z axis
+D = np.loadtxt('Ctmatrix_rhoegStat')
+setLimitz_upper = 0.01    # set limits of z axis
+setLimitz_lower = -0.01  # set limits of z axis
+#D = np.loadtxt('Ctnorm')
+#setLimitz_upper = 5    # set limits of z axis
+#setLimitz_lower = -5  # set limits of z axis
+#D = np.loadtxt('Ctnorminv')
+#setLimitz_upper = 50    # set limits of z axis
+#setLimitz_lower = -50  # set limits of z axis
+#D = np.loadtxt('Ctdev')
+#setLimitz_upper = 0.025    # set limits of z axis
+#setLimitz_lower = -0.8  # set limits of z axis
+#D = np.loadtxt('intKt')
+#setLimitz_upper = 0.25    # set limits of z axis
+#setLimitz_lower = -0.8  # set limits of z axis
+#D = np.loadtxt('CtdevCtnorminv')
+#setLimitz_upper = 1.5    # set limits of z axis
+#setLimitz_lower = -1.5  # set limits of z axis
+#D = np.loadtxt('Mt_rhoeg')
+#setLimitz_upper = 1.5    # set limits of z axis
+#setLimitz_lower = -1.5  # set limits of z axis
+#D = np.loadtxt('Ft')
+#setLimitz_upper = 0.025    # set limits of z axis
+#setLimitz_lower = -0.8  # set limits of z axis
+#D = np.loadtxt('Ut_rhoeg')
+#setLimitz_upper = 5    # set limits of z axis
+#setLimitz_lower = -5  # set limits of z axis
+#D = np.loadtxt('MRt_system')
+#setLimitz_upper = 40.0    # set limits of z axis
+#setLimitz_lower = -40.0  # set limits of z axis
+#D = np.loadtxt('error_MRt')
+#setLimitz_upper = 1e12    # set limits of z axis
+#setLimitz_lower = -1e-12  # set limits of z axis
+
+
 number_correlations_files = 9
 number_nodes = int(np.sqrt(len(D[0]) / number_correlations_files ))
 steps = len(D)
@@ -62,7 +93,7 @@ ha = fig.gca(projection='3d')
 
 def init():
     Z = out0
-    wframe =ha.plot_surface(X, Y, Z, cmap='summer', rstride=3, cstride=3, alpha=0.5, linewidth=0.3)  # Creates the frame
+    wframe =ha.plot_surface(X, Y, Z, cmap='summer', rstride=1, cstride=1, alpha=0.5, linewidth=0.3)  # Creates the frame
     return wframe
 
 ###################
@@ -91,16 +122,16 @@ def animate(i, ha, fig):
     C_22 = np.asmatrix(C_22)
     #Create the matrix C for time equal t
     C = np.bmat(([C_00, C_01, C_02],[C_10, C_11, C_12],[C_20, C_21, C_22]))
-    wframe =ha.plot_surface(X, Y, C, cmap='summer', rstride=3, cstride=3, alpha=0.5, linewidth=0.3,)
+    wframe =ha.plot_surface(X, Y, C, cmap='summer', rstride=1, cstride=1, alpha=0.5, linewidth=0.3,)
     # Customize axis
     ha.set_xlabel('Nodes')
     ha.set_ylabel('Nodes')
-    ha.set_zlabel('')
+    ha.set_zlabel('Step' + str(i))
     ha.set_zlim(setLimitz_lower, setLimitz_upper)   #Set the limits of z axis.
     return wframe
 
 # Use FuncAnimation to create the movie using the frames.
-ani = animation.FuncAnimation(fig, animate, init_func = init, frames = 20, fargs=(ha, fig), interval = 1)
+ani = animation.FuncAnimation(fig, animate, init_func = init, frames = range(0,1000,20), fargs=(ha, fig), interval = 1)
 
 # Save the animation as an mp4
 #ani.save('animation-Dmatrix_5snapshots.mp4', fps=100, writer="avconv", codec="libx264")
