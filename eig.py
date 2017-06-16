@@ -1,11 +1,23 @@
+##########################################################################################
+#THIS SCRIPT COMPUTES LAMBDA MATRIX (C(0) * CL(0)^-1) AND ITS EIGENVECTORS AND EIGENVALUES
+##########################################################################################
+#AUTHOR: DiegoDZ
+#DATE: jun 2017
+#RUN: >>> eig.py
+##########################################################################################
+##########################################################################################
 import numpy as np
 from scipy import linalg
 
+#Define step function
 def step(x):
     return x * (x > 0)
 
+#Load files
 Cl0       = np.loadtxt('Cl0')
 C0        = np.loadtxt('C0')
+
+#Some computes
 Cl0inv    = linalg.pinv(Cl0, rcond = 1e-3)
 Lambda    = np.dot(C0,Cl0inv)
 LambdaSim = (Lambda + Lambda.T ) / 2
@@ -31,7 +43,6 @@ np.savetxt('LambdaSimError', LambdaSimError)
 np.savetxt('LambdaRec', LambdaRec)
 np.savetxt('wLambda', w)
 np.savetxt('vLambda', v)
-
 
 
 #Cl0sim    = (Cl0 + Cl0.T ) / 2

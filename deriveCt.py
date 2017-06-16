@@ -32,7 +32,6 @@ number_nodes = int(np.sqrt(len(C[0]) / number_correlations_files ))
 Cdev = np.zeros((number_snapshots, number_correlations_files * number_nodes ** 2))
 
 # Derive C(t)
-# Cuidado porque C(t=-1) corresponde a la ultima fila de C(t), por lo que al calcular la derivada en t=0 estamos usando C(t=0) y C(t=-1)
 for t in range(1,number_snapshots):
     for i in range(0, len(C[0]), 1):
         Cdev[t,i] = (C[t,i] - C[t-1,i]) / dt
