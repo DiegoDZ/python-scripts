@@ -7,7 +7,7 @@
 #------------------------------------------------------------------------------
 #                         Author: @DiegoDZ
 #                         Date  : July 2017
-#                         Run   : computeLambda.py
+#                         Run   : python computeLambda.py  (Run with python 2.7)
 #------------------------------------------------------------------------------
 # There are five theories depending on the selected coarse-grained variables:
 # Density of the fluid   : rho
@@ -67,8 +67,8 @@ compute_CGpred = raw_input("Do you want to compute CG variables from lambda? (y/
 #------------------------------------------------------------------------------
 Lx          = 46.1766        #dimensions simulation box
 Ly          = 46.1766
-Lz          = 23.0883
-nNodes      = 80             #number nodes
+Lz          = 27.7060
+nNodes      = 55             #number of nodes
 dz          = Lz / nNodes    #bin size
 V           = dz * Lx * Ly   #bin volume
 dt          = 0.002          #lammps dt=2e-4. Save info every 10 steps
@@ -76,7 +76,7 @@ nSteps      = 2000           #t=4 (r.u.).
 nStepsModel = 1000           #time to compute the prediction of CG variables
 tol         = 1e-3           #rcond in linalg.pinv. It will be use to compute R
 tau         = 0.04           #time to which lambda will be calculate
-#Number of blocks of C(t) and number variables.
+#Number of blocks of C(t) and number of variables.
 if theory == 1:
     nBlocks = 4
     nVar    = 2

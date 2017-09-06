@@ -120,8 +120,8 @@ Ctdev[0,:] = reshape_mv(Ctdev0)
 #######################################
 #COMPUTE Ctdev*Ctnorm^-1 AT t=0
 #######################################
-CtdevCtnorminv0 = Ctdev0.dot(Ctnorminv0)
-CtdevCtnorminv[0,:] = reshape_mv(CtdevCtnorminv0)
+#CtdevCtnorminv0 = Ctdev0.dot(Ctnorminv0)
+#CtdevCtnorminv[0,:] = reshape_mv(CtdevCtnorminv0)
 
 #######################################
 #COMPUTE Ctdev*Ctnorm^-1 + L AT t=0
@@ -132,14 +132,14 @@ CtdevCtnorminv[0,:] = reshape_mv(CtdevCtnorminv0)
 #####################################
 #COMPUTE CtdevCtinv  AT t=0
 #####################################
-CtdevCtinv0 = Ctdev0.dot(R)
-CtdevCtinv[0,:] = reshape_mv(CtdevCtinv0)
+#CtdevCtinv0 = Ctdev0.dot(R)
+#CtdevCtinv[0,:] = reshape_mv(CtdevCtinv0)
 
 #####################################
 #COMPUTE F  AT t=0
 #####################################
-Ft0 = Ctdev0 + L_stat.dot(R).dot(Ct0)
-Ft[0,:] = reshape_mv(Ft0)
+#Ft0 = Ctdev0 + L_stat.dot(R).dot(Ct0)
+#Ft[0,:] = reshape_mv(Ft0)
 ############################################## COMPUTE FOR t >0 ###################################################################
 
 for t in range(1, steps-1, 1):
@@ -147,25 +147,25 @@ for t in range(1, steps-1, 1):
     # COMPUTE Cinv
     #####################################
         #Create the matrix C(t) and its inverse
-        C_00 = np.asmatrix(Ct[t, 0:len(Ct[0])/blocks].reshape(nodes, nodes))
-        C_01 = np.asmatrix(Ct[t, len(Ct[0])/blocks:2 * len(Ct[0])/blocks].reshape(nodes, nodes))
-        C_02 = np.asmatrix(Ct[t, 2*len(Ct[0])/blocks:3 * len(Ct[0])/blocks].reshape(nodes, nodes))
-        C_10 = np.asmatrix(Ct[t, 3*len(Ct[0])/blocks:4 * len(Ct[0])/blocks].reshape(nodes, nodes))
-        C_11 = np.asmatrix(Ct[t, 4*len(Ct[0])/blocks:5 * len(Ct[0])/blocks].reshape(nodes, nodes))
-        C_12 = np.asmatrix(Ct[t, 5*len(Ct[0])/blocks:6 * len(Ct[0])/blocks].reshape(nodes, nodes))
-        C_20 = np.asmatrix(Ct[t, 6*len(Ct[0])/blocks:7 * len(Ct[0])/blocks].reshape(nodes, nodes))
-        C_21 = np.asmatrix(Ct[t, 7*len(Ct[0])/blocks:8 * len(Ct[0])/blocks].reshape(nodes, nodes))
-        C_22 = np.asmatrix(Ct[t, 8*len(Ct[0])/blocks:9 * len(Ct[0])/blocks].reshape(nodes, nodes))
-        C = np.bmat(([C_00, C_01, C_02],[C_10, C_11, C_12],[C_20, C_21, C_22]))
-        Cinv = linalg.pinv(C, rcond = tol)
+        #C_00 = np.asmatrix(Ct[t, 0:len(Ct[0])/blocks].reshape(nodes, nodes))
+        #C_01 = np.asmatrix(Ct[t, len(Ct[0])/blocks:2 * len(Ct[0])/blocks].reshape(nodes, nodes))
+        #C_02 = np.asmatrix(Ct[t, 2*len(Ct[0])/blocks:3 * len(Ct[0])/blocks].reshape(nodes, nodes))
+        #C_10 = np.asmatrix(Ct[t, 3*len(Ct[0])/blocks:4 * len(Ct[0])/blocks].reshape(nodes, nodes))
+        #C_11 = np.asmatrix(Ct[t, 4*len(Ct[0])/blocks:5 * len(Ct[0])/blocks].reshape(nodes, nodes))
+        #C_12 = np.asmatrix(Ct[t, 5*len(Ct[0])/blocks:6 * len(Ct[0])/blocks].reshape(nodes, nodes))
+        #C_20 = np.asmatrix(Ct[t, 6*len(Ct[0])/blocks:7 * len(Ct[0])/blocks].reshape(nodes, nodes))
+        #C_21 = np.asmatrix(Ct[t, 7*len(Ct[0])/blocks:8 * len(Ct[0])/blocks].reshape(nodes, nodes))
+        #C_22 = np.asmatrix(Ct[t, 8*len(Ct[0])/blocks:9 * len(Ct[0])/blocks].reshape(nodes, nodes))
+        #C = np.bmat(([C_00, C_01, C_02],[C_10, C_11, C_12],[C_20, C_21, C_22]))
+        #Cinv = linalg.pinv(C, rcond = tol)
 
     #####################################
     # COMPUTE C(t) NORMALIZED AND ITS INVERSE
     #####################################
-        Cnorm = R.dot(C)
-        Cnorminv = linalg.pinv(Cnorm, rcond = tol)
-        Ctnorm[t,:] = reshape_mv(Cnorm)
-        Ctnorminv[t,:] = reshape_mv(Cnorminv)
+        #Cnorm = R.dot(C)
+        #Cnorminv = linalg.pinv(Cnorm, rcond = tol)
+        #Ctnorm[t,:] = reshape_mv(Cnorm)
+        #Ctnorminv[t,:] = reshape_mv(Cnorminv)
 
     #####################################
     # DERIVE C(t)
@@ -204,18 +204,16 @@ for t in range(1, steps-1, 1):
     #####################################
     # COMPUTE F = Ctdev + L*R*C(t)
     #####################################
-        F = Cdev + L_stat.dot(R).dot(C)
-        Ft[t,:] = reshape_mv(F)
+        #F = Cdev + L_stat.dot(R).dot(C)
+        #Ft[t,:] = reshape_mv(F)
 
     #####################################
     # COMPUTE M(t)
     #####################################
-        #M = -(Cdev.dot(Cnorminv) - Ctdev0)
+        #M = -F.dot(Cnorminv)
         #Mt[t,:] = reshape_mv(M)
-        M = -F.dot(Cnorminv)
-        Mt[t,:] = reshape_mv(M)
-        MR = -F.dot(Cinv)
-        MRt[t,:] = reshape_mv(MR)
+        #MR = -F.dot(Cinv)
+        #MRt[t,:] = reshape_mv(MR)
 
         #MR_systemT = linalg.lstsq(C.T,-F.T, tol)[0]
         #MR_system = np.asmatrix(MR_systemT).T
@@ -232,10 +230,10 @@ for t in range(1, steps-1, 1):
     #####################################
     # COMPUTE Cdev(t) * Cnorminv(t)
     #####################################
-        Cnorminv = linalg.pinv(Cnorm, rcond =tol)
-        Ctnorminv[t,:] = reshape_mv(Cnorminv)
-        X = Cdev.dot(Cnorminv)
-        CtdevCtnorminv[t,:] = reshape_mv(X)
+        #Cnorminv = linalg.pinv(Cnorm, rcond =tol)
+        #Ctnorminv[t,:] = reshape_mv(Cnorminv)
+        #X = Cdev.dot(Cnorminv)
+        #CtdevCtnorminv[t,:] = reshape_mv(X)
 
     #####################################
     # COMPUTE (C(t=0) * Cinv(t) * Cdev(t)).T
@@ -251,18 +249,18 @@ for t in range(1, steps-1, 1):
 
 ###################################################### SAVE THE OUTPUT ##############################################################
 
-np.savetxt('Ct0_rhoeg', Ct0_stat)
-np.savetxt('Ctdev', Ctdev)
+#np.savetxt('Ct0_rhoeg', Ct0_stat)
+#np.savetxt('Ctdev', Ctdev)
 np.savetxt('intKt', intKt)
-np.savetxt('L_rhoeg',L_stat)
-np.savetxt('R_rhoeg', R)
-np.savetxt('Ctnorm', Ctnorm)
-np.savetxt('Ctinv', Ctinv)
-np.savetxt('Ctnorminv', Ctnorminv)
-np.savetxt('CtdevCtnorminv', CtdevCtnorminv)
-np.savetxt('Ft', Ft)
-np.savetxt('Mt_rhoeg', Mt)
-np.savetxt('MRt', MRt)
+#np.savetxt('L_rhoeg',L_stat)
+#np.savetxt('R_rhoeg', R)
+#np.savetxt('Ctnorm', Ctnorm)
+#np.savetxt('Ctinv', Ctinv)
+#np.savetxt('Ctnorminv', Ctnorminv)
+#np.savetxt('CtdevCtnorminv', CtdevCtnorminv)
+#np.savetxt('Ft', Ft)
+#np.savetxt('Mt_rhoeg', Mt)
+#np.savetxt('MRt', MRt)
 #np.savetxt('MRt_system', MRt_system)
 #np.savetxt('error_MRt', error_MRt)
 #EOF
