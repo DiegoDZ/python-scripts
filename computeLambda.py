@@ -15,34 +15,37 @@
 # Energy of the fluid    : e
 # x-momentum of the fluid: gx
 # z-momentum of the fluid: gz
-
+#
 # Theories:
 # Th 1: rho and gz
 # Th 2: gx
 # Th 3: rho, e, gz
 # Th 4: rho, e, gx and gz
 # Th 5: e
-
+#
 # It is used the time reversal property and the symmetry of C(0) in order to
 # create C(t) and C(0).
 # For the system 'fluid' is take into account periodic boundary conditions in
 # order to improve the correlations files before creating the matrix C(t).
 #           C{mu,nu} = 1/nNodes * sum(C{mu+k,nu+k})
 #           k=[0,nNodes-1]
-
+#
 # Onsager reciprocity is used to improve the statistic of matrix M and L.
-
+#
 # The time step in this script is 2e-3, while the time step of lammps was 2e-4.
 # This is because the snapshots were saved every 10 time steps.
-
+#
 # In order to compute the matrix lambda, several values of the time 'tau' were
 # used. The selected time tau=0.04 gived the lower error (i.e. Frobenious
 # norm error of C(t) predicted - C(t)) for the system "solid-fluid", and tau=0.18
-#for the the system "fluid".
-
+# for the the system "fluid".
+#
+# Local aproximation of the matrix lambda is used to obtain predicted correlations
+# in the local aproximation.
+#
 # Frobeniuos norm error (divided by the number of nodes) is calculated to
 # compare C(t) predicted  with C(t).
-
+#
 # Lambda is used to obtain the predicted coarse variables. In order to compare
 # the predicted and the original values, it will compute the error as the
 # difference between them.
@@ -67,25 +70,34 @@ print 'CG THEORIES'\
 '\n' '3 -> rho, e and gz' \
 '\n' '4 -> rho, e, gx and gz' \
 '\n' '5 -> e'
-theory         = int(raw_input("Please, select one theory: "))
-compute_Ct     = raw_input("Do you want to compute C(t)? (y/n): ")
-compute_lambda = raw_input("Do you want to compute lambda, M and L? (y/n): ")
-compute_Ctpred = raw_input("Do you want to compute C(t) from lambda? (y/n): ")
-compute_CGpred = raw_input("Do you want to compute CG variables from lambda? (y/n): ")
+theory              = int(raw_input("Please, select one theory: "))
+compute_Ct          = raw_input("Do you want to compute C(t)? (y/n): ")
+compute_lambda      = raw_input("Do you want to compute lambda, M and L? (y/n): ")
+compute_Ctpred      = raw_input("Do you want to compute C(t) from lambda? (y/n): ")
+compute_CtpredLocal = raw_input("Do you want to compute C(t) from lambda (local aprox.)? (y/n): ")
+compute_CGpred      = raw_input("Do you want to compute CG variables from lambda? (y/n): ")
 #------------------------------------------------------------------------------
 
 #------------------------------------------------------------------------------
 # Define global variables
 #------------------------------------------------------------------------------
-Lx,Ly,Lz    = 40.0,40.0,24.0   #dimensions of the simulation box
-nNodes      = 56               #number of nodes
-dz          = Lz / nNodes      #bin size
-V           = dz * Lx * Ly     #bin volume
-dt          = 0.002            #lammps dt=2e-4 (but info saved every 10 steps)
-nSteps      = 2000             #t=4 (r.u.). The 'support' of the correlation files after cut them
-nStepsModel = 1000             #time to compute the prediction of CG variables
-tol         = 1e-3             #rcond in linalg.pinv. It will be use to compute R
-tau         = 0.04             #time to which lambda will be calculate
+Lx,Ly,Lz    = 40.0,40.0,24.0  #dimensions of the simulation box
+nNodes      = 112             #number of nodes
+dz          = Lz / nNodes     #bin size
+V           = dz * Lx * Ly    #bin volume
+dt          = 0.002           #lammps dt=2e-4 (but info saved every 10 steps)
+nSteps      = 2000            #t=4 (r.u.). The 'support' of the correlation files after cut them
+nStepsModel = 1000            #time to compute the prediction of CG variables
+tol         = 1e-3            #rcond in linalg.pinv. It will be use to compute R
+#tau and v0 for different number of nodes
+if nNodes == 112:
+    tau,v0  = 0.12,0.8        #time to which lambda will be calculated, and kinematic viscosity for local aproximation of C(t) predicted
+elif nNodes == 56:
+    tau,v0  = 0.18,1.5
+elif nNodes == 28:
+    tau,v0  = 0.29,1.5
+elif nNodes == 14:
+    tau,v0  = 0.58,1.9
 #Number of blocks of C(t) and number of variables
 if theory == 1:
     nBlocks = 4
@@ -99,9 +111,12 @@ elif theory == 5:
     nBlocks = 1
 nVar = int(np.sqrt(nBlocks))
 dim  = nVar * nNodes
-#Create the matrix epsilon
-eps                                = np.identity(dim)
+#Create the matrix epsilon and the laplacian
+eps                                 = np.identity(dim)
 eps[dim-nNodes:dim,dim-nNodes:dim] *= -1
+laplacian                           = (1 / dz**2) * (-2 * (np.eye(nNodes)) + \
+                                    np.eye(nNodes, nNodes, -nNodes+1) + np.eye(nNodes, nNodes, nNodes-1) +
+                                    np.eye(nNodes, nNodes, -1) + np.eye(nNodes, nNodes, 1))
 #------------------------------------------------------------------------------
 # Define functions
 #------------------------------------------------------------------------------
@@ -132,7 +147,7 @@ def pbc(C):
 
 #Lambda
 def computeLambda(Ct,C0):
-    row       = tau / dt
+    row       = int(tau / dt)
     Cforward  = reshape_vm(Ct[row+1,:])
     Cbackward = reshape_vm(Ct[row-1,:])
     Cdev      = (Cforward - Cbackward) / (2 * dt)
@@ -151,15 +166,14 @@ def frobenious(A,B):
     return error
 
 #C(t) predicted
-def computeCtpredict(Ct,C0,Lambda):
+def computeCtpredict(Ct,Lambda):
     Ctpredict  = np.zeros((nSteps, nNodes**2*nBlocks))
     #Ctdev      = np.zeros((nSteps-1, nNodes**2*nBlocks))
     errorCtpredict = np.zeros(nSteps)
-    row = tau / dt
+    row = int(tau / dt)
     t   = 0
     for j in range(nSteps):
         print datetime.datetime.now(), 'Computing C(t) predicted. Step', str(j)
-        #Ctpredict[j,:]    = reshape_mv(np.dot(expm(-Lambda * t),C0))
         Ctpredict[j,:]    = reshape_mv(np.dot(expm(-Lambda * (t-tau)), reshape_vm(Ct[row])))
         errorCtpredict[j] = frobenious(Ctpredict[j,:],Ct[j,:])
         t+=dt
@@ -169,6 +183,17 @@ def computeCtpredict(Ct,C0,Lambda):
     #    Ctdev[j,:]        = reshape_mv((Cforward - Cbackward) / (2 * dt))
     #    t+=dt
     return Ctpredict, errorCtpredict
+
+#C(t) predicted for local aproximation.
+def computeCtpredictLocal(Ct):
+    CtpredictLocal = np.zeros((nSteps, nNodes**2*nBlocks))
+    row = int(tau / dt)
+    t   = 0
+    for j in range(nSteps):
+        print datetime.datetime.now(), 'Computing C(t) predicted (local aprox.). Step', str(j)
+        CtpredictLocal[j,:] = reshape_mv(expm(v0*laplacian*(t-tau)).dot(reshape_vm(Ct[row])))
+        t+=dt
+    return CtpredictLocal
 
 #CG variables predicted
 def computeCGpredict(Lambda,V0):
@@ -204,6 +229,7 @@ if theory == 1:
                 Ct[i,:] = reshape_mv(0.5 * (Ct1+eps.dot(Ct1.T).dot(eps)))
         if system == 'f':
             for i in range(nSteps):
+                print datetime.datetime.now(), 'Computing C(t) for rho-gz theory. Step', str(i)
                 Ct1     = reshape_vm(np.hstack(\
                         reshape_mv(pbc(reshape_vm(c_rhorho[i,:]))),\
                         reshape_mv(pbc(reshape_vm(c_rhogz[i,:]))),
@@ -214,7 +240,7 @@ if theory == 1:
         C0      = reshape_vm(Ct[0,:])
         C0_stat = (C0 + C0.T) / 2
         np.savetxt('Ct_2e3steps-rhogzTh', Ct)
-        np.savetxt('Ct_100steps-rhogzTh', Ct[0:100,:])
+        np.savetxt('Ct_300steps-rhogzTh', Ct[0:300,:])
         np.savetxt('C0-rhogzTh', C0_stat)
         print datetime.datetime.now(),'C(t) computed for rho-gz theory!'
     #---------------
@@ -222,12 +248,12 @@ if theory == 1:
     #---------------
     if compute_lambda == 'y':
         print datetime.datetime.now(),'Computing lambda, M and L for rho-gz theory...'
-        Ct         = np.loadtxt('Ct_100steps-rhogzTh')
+        Ct         = np.loadtxt('Ct_300steps-rhogzTh')
         C0         = np.loadtxt('C0-rhogzTh')
         Lambda,M,L = computeLambda(Ct,C0)
-        np.savetxt('Lambda-rhogzTh', Lambda)
-        np.savetxt('M-rhogzTh', M)
-        np.savetxt('L-rhogzTh', L)
+        np.savetxt('Lambda-rhogzTh-tau'+str(tau), Lambda)
+        np.savetxt('M-rhogzTh-tau'+str(tau), M)
+        np.savetxt('L-rhogzTh-tau'+str(tau), L)
         print datetime.datetime.now(),'Lambda, M and L computed for rho-gz theory!'
     #-----------------------
     # Compute C(t) predicted
@@ -235,11 +261,15 @@ if theory == 1:
     if compute_Ctpred == 'y':
         print datetime.datetime.now(),'Computing C(t) predicted for rho-gz theory...'
         Ct                        = np.loadtxt('Ct_2e3steps-rhogzTh')
-        C0                        = np.loadtxt('C0-rhogzTh')
-        Lambda                    = np.loadtxt('Lambda-rhogzTh')
-        Ctpredict, errorCtpredict = computeCtpredict(Ct,C0,Lambda)
+        Lambda                    = np.loadtxt('Lambda-rhogzTh-tau'+str())
+        Ctpredict, errorCtpredict = computeCtpredict(Ct,Lambda)
         np.savetxt('Ctpredict-rhogzTh', Ctpredict)
         np.savetxt('errorCtpredict-rhogzTh', errorCtpredict)
+        print datetime.datetime.now(),'C(t) predicted computed for rho-gz theory!'
+    if compute_CtpredLocal == 'y':
+        Ct             = np.loadtxt('Ct_2e3steps-rhogzTh')
+        CtpredictLocal = computeCtpredictLocal(Ct)
+        np.savetxt('CtpredictLocal-rhogzTh-v'+str(v0), CtpredictLocal)
         print datetime.datetime.now(),'C(t) predicted computed for rho-gz theory!'
     #-------------------------------
     # Compute CG variables predicted
@@ -277,15 +307,17 @@ elif theory == 2:
 
         if system == 's':
             for i in range(nSteps):
+                print datetime.datetime.now(), 'Computing C(t) for gx theory. Step', str(i)
                 Ct[i,:] = reshape_mv(((reshape_vm(c_gxgx[i,:]) + reshape_vm(c_gxgx[i,:]).T) / 2))
         elif system == 'f':
             for i in range(nSteps):
+                print datetime.datetime.now(), 'Computing C(t) for gx theory. Step', str(i)
                 Ct[i,:] = reshape_mv(((pbc(reshape_vm(c_gxgx[i,:])) + pbc(reshape_vm(c_gxgx[i,:]).T)) / 2))
 
         C0      = reshape_vm(Ct[0,:])
         C0_stat = (C0 + C0.T) / 2
         np.savetxt('Ct_2e3steps-gxTh', Ct)
-        np.savetxt('Ct_100steps-gxTh', Ct[0:100,:])
+        np.savetxt('Ct_300steps-gxTh', Ct[0:300,:])
         np.savetxt('C0-gxTh', C0_stat)
         print datetime.datetime.now(),'C(t) computed for gx theory!'
     #---------------
@@ -293,18 +325,17 @@ elif theory == 2:
     #---------------
     if compute_lambda == 'y':
         print datetime.datetime.now(),'Computing lambda, M and L for gx theory...'
-        #Ct         = np.loadtxt('Ct_100steps-gxTh')
-        Ct         = np.loadtxt('Ct_100steps-gxTh')
+        Ct         = np.loadtxt('Ct_300steps-gxTh')
         C0         = np.loadtxt('C0-gxTh')
-        #Lambda,M,L = computeLambda(Ct,C0)
-        #np.savetxt('Lambda-gxTh', Lambda)
-        #np.savetxt('M-gxTh', M)
-        #np.savetxt('L-gxTh', L)
-        for tau in np.arange(0.15,0.19,0.01):
-            Lambda,M,L = computeLambda(Ct,C0)
-            np.savetxt('Lambda-gxTh-tau'+str(tau), Lambda)
-            np.savetxt('M-gxTh-tau'+str(tau), M)
-            np.savetxt('L-gxTh-tau'+str(tau), L)
+        Lambda,M,L = computeLambda(Ct,C0)
+        np.savetxt('Lambda-gxTh-tau'+str(tau), Lambda)
+        np.savetxt('M-gxTh-tau'+str(tau), M)
+        np.savetxt('L-gxTh-tau'+str(tau), L)
+        #for tau in np.arange(0.4,0.59,0.01):
+        #    Lambda,M,L = computeLambda(Ct,C0)
+        #    np.savetxt('Lambda-gxTh-tau'+str(tau), Lambda)
+        #    np.savetxt('M-gxTh-tau'+str(tau), M)
+        #    np.savetxt('L-gxTh-tau'+str(tau), L)
         print datetime.datetime.now(),'Lambda, M and L computed for gx theory!'
     #-----------------------
     # Compute C(t) predicted
@@ -312,16 +343,24 @@ elif theory == 2:
     if compute_Ctpred == 'y':
         print datetime.datetime.now(),'Computing C(t) predicted for gx theory...'
         Ct                        = np.loadtxt('Ct_2e3steps-gxTh')
-        C0                        = np.loadtxt('C0-gxTh')
-        #Lambda                    = np.loadtxt('Lambda-gxTh')
-        #Ctpredict, errorCtpredict = computeCtpredict(Ct,C0,Lambda)
-        #np.savetxt('Ctpredict-gxTh', Ctpredict)
-        #np.savetxt('errorCtpredict-gxTh', errorCtpredict)
-        for tau in np.arange(0.15,0.19,0.01):
-            Lambda                    = np.loadtxt('Lambda-gxTh-tau'+str(tau))
-            Ctpredict, errorCtpredict = computeCtpredict(Ct,C0,Lambda)
-            np.savetxt('Ctpredict-gxTh-tau'+str(tau), Ctpredict)
-            np.savetxt('errorCtpredict-gxTh-tau'+str(tau), errorCtpredict)
+        Lambda                    = np.loadtxt('Lambda-gxTh-tau'+str(tau))
+        Ctpredict, errorCtpredict = computeCtpredict(Ct,Lambda)
+        np.savetxt('Ctpredict-gxTh-tau'+str(tau), Ctpredict)
+        np.savetxt('errorCtpredict-gxTh-tau'+str(tau), errorCtpredict)
+        #for tau in np.arange(0.4,0.59,0.01):
+        #    Lambda                    = np.loadtxt('Lambda-gxTh-tau'+str(tau))
+        #    Ctpredict, errorCtpredict = computeCtpredict(Ct,Lambda)
+        #    np.savetxt('Ctpredict-gxTh-tau'+str(tau), Ctpredict)
+        #    np.savetxt('errorCtpredict-gxTh-tau'+str(tau), errorCtpredict)
+        print datetime.datetime.now(),'C(t) predicted computed for gx theory!'
+    if compute_CtpredLocal == 'y':
+        Ct             = np.loadtxt('Ct_2e3steps-gxTh')
+        CtpredictLocal = computeCtpredictLocal(Ct)
+        np.savetxt('CtpredictLocal-gxTh-v'+str(v0), CtpredictLocal)
+        #for v0 in np.arange(1.5,2.5,0.1):
+        #    tau = 0.58
+        #    CtpredictLocal = computeCtpredictLocal(Ct)
+        #    np.savetxt('CtpredictLocal-gxTh-v'+str(v0), CtpredictLocal)
         print datetime.datetime.now(),'C(t) predicted computed for gx theory!'
     #-------------------------------
     # Compute CG variables predicted
@@ -359,6 +398,7 @@ elif theory == 3:
 
         if system == 's':
             for i in range(nSteps):
+                print datetime.datetime.now(), 'Computing C(t) for rho-e-gz theory. Step', str(i)
                 Ct1     = reshape_vm(np.hstack((\
                         c_rhorho[i,:], c_rhoe[i,:], c_rhogz[i,:],\
                         c_erho[i,:],   c_ee[i,:],   c_egz[i,:],
@@ -366,6 +406,7 @@ elif theory == 3:
                 Ct[i,:] = reshape_mv(0.5 * (Ct1+eps.dot(Ct1.T).dot(eps)))
         if system == 'f':
             for i in range(nSteps):
+                print datetime.datetime.now(), 'Computing C(t) for rho-e-gz theory. Step', str(i)
                 Ct1     = reshape_vm(np.hstack(\
                         reshape_mv(pbc(reshape_vm(c_rhorho[i,:]))),\
                         reshape_mv(pbc(reshape_vm(c_rhoe[i,:]))),\
@@ -381,7 +422,7 @@ elif theory == 3:
         C0      = reshape_vm(Ct[0,:])
         C0_stat = (C0 + C0.T) / 2
         np.savetxt('Ct_2e3steps-rhoegzTh', Ct)
-        np.savetxt('Ct_100steps-rhoegzTh', Ct[0:100,:])
+        np.savetxt('Ct_300steps-rhoegzTh', Ct[0:300,:])
         np.savetxt('C0-rhoegzTh', C0_stat)
         print datetime.datetime.now(),'C(t) computed for rho-e-gz theory!'
     #---------------
@@ -389,12 +430,12 @@ elif theory == 3:
     #---------------
     if compute_lambda == 'y':
         print datetime.datetime.now(),'Computing lambda, M and L for rho-e-gz theory...'
-        Ct         = np.loadtxt('Ct_100steps-rhoegzTh')
+        Ct         = np.loadtxt('Ct_300steps-rhoegzTh')
         C0         = np.loadtxt('C0-rhoegzTh')
         Lambda,M,L = computeLambda(Ct,C0)
-        np.savetxt('Lambda-rhoegzTh', Lambda)
-        np.savetxt('M-rhoegzTh', M)
-        np.savetxt('L-rhoegzTh', L)
+        np.savetxt('Lambda-rhoegzTh-tau'+str(tau), Lambda)
+        np.savetxt('M-rhoegzTh-tau'+str(tau), M)
+        np.savetxt('L-rhoegzTh-tau'+str(tau), L)
         print datetime.datetime.now(),'Lambda, M and L computed for rho-e-gz theory!'
     #-----------------------
     # Compute C(t) predicted
@@ -402,11 +443,15 @@ elif theory == 3:
     if compute_Ctpred == 'y':
         print datetime.datetime.now(),'Computing C(t) predicted for rho-e-gz theory...'
         Ct                        = np.loadtxt('Ct_2e3steps-rhoegzTh')
-        C0                        = np.loadtxt('C0-rhoegzTh')
-        Lambda                    = np.loadtxt('Lambda-rhoegzTh')
-        Ctpredict, errorCtpredict = computeCtpredict(Ct,C0,Lambda)
+        Lambda                    = np.loadtxt('Lambda-rhoegzTh-tau'+str())
+        Ctpredict, errorCtpredict = computeCtpredict(Ct,Lambda)
         np.savetxt('Ctpredict-rhoegzTh', Ctpredict)
         np.savetxt('errorCtpredict-rhoegzTh', errorCtpredict)
+        print datetime.datetime.now(),'C(t) predicted computed for rho-e-gz theory!'
+    if compute_CtpredLocal == 'y':
+        Ct             = np.loadtxt('Ct_2e3steps-rhoegzTh')
+        CtpredictLocal = computeCtpredictLocal(Ct)
+        np.savetxt('CtpredictLocal-rhoegzTh-v'+str(v0), CtpredictLocal)
         print datetime.datetime.now(),'C(t) predicted computed for rho-e-gz theory!'
     #-------------------------------
     # Compute CG variables predicted
@@ -441,7 +486,7 @@ elif theory == 4:
     # Compute C(t)
     #-------------
     if compute_Ct == 'y':
-        print datetime.datetime.now(),'Computing C(t) for rho, e, gx and gz theory...'
+        print datetime.datetime.now(),'Computing C(t) for rho-e-gx-gz theory...'
         c_rhorho = np.loadtxt('corr_rhorho_2e3steps')
         c_rhoe   = np.loadtxt('corr_rhoe_2e3steps')
         c_rhogx  = np.loadtxt('corr_rhogx_2e3steps')
@@ -462,6 +507,7 @@ elif theory == 4:
 
         if system == 's':
             for i in range(nSteps):
+                print datetime.datetime.now(), 'Computing C(t) for rho-e-gx-gz theory. Step', str(i)
                 Ct1     = reshape_vm(np.hstack((\
                         c_rhorho[i,:], c_rhoe[i,:], c_rhogx[i,:], c_rhogz[i,:],\
                         c_erho[i,:],   c_ee[i,:],   c_egx[i,:],   c_egz[i,:],\
@@ -470,6 +516,7 @@ elif theory == 4:
                 Ct[i,:] = reshape_mv(0.5 * (Ct1+eps.dot(Ct1.T).dot(eps)))
         if system == 'f':
             for i in range(nSteps):
+                print datetime.datetime.now(), 'Computing C(t) for rho-e-gx-gz theory. Step', str(i)
                 Ct1     = reshape_vm(np.hstack(\
                         reshape_mv(pbc(reshape_vm(c_rhorho[i,:]))),\
                         reshape_mv(pbc(reshape_vm(c_rhoe[i,:]))),\
@@ -492,7 +539,7 @@ elif theory == 4:
         C0      = reshape_vm(Ct[0,:])
         C0_stat = (C0 + C0.T) / 2
         np.savetxt('Ct_2e3steps-rhoegxgzTh', Ct)
-        np.savetxt('Ct_100steps-rhoegxgzTh', Ct[0:100,:])
+        np.savetxt('Ct_300steps-rhoegxgzTh', Ct[0:300,:])
         np.savetxt('C0-rhoegxgzTh', C0_stat)
         print datetime.datetime.now(),'C(t) computed for rho-e-gx-gz theory!'
     #---------------
@@ -500,12 +547,12 @@ elif theory == 4:
     #---------------
     if compute_lambda == 'y':
         print datetime.datetime.now(),'Computing lambda, M and L for rho, e, gx and gz theory...'
-        Ct         = np.loadtxt('Ct_100steps-rhoegxgzTh')
+        Ct         = np.loadtxt('Ct_300steps-rhoegxgzTh')
         C0         = np.loadtxt('C0-rhoegxgzTh')
         Lambda,M,L = computeLambda(Ct,C0)
-        np.savetxt('Lambda-rhoegxgzTh', Lambda)
-        np.savetxt('M-rhoegxgzTh', M)
-        np.savetxt('L-rhoegxgzTh', L)
+        np.savetxt('Lambda-rhoegxgzTh-tau'+str(tau), Lambda)
+        np.savetxt('M-rhoegxgzTh-tau'+str(tau), M)
+        np.savetxt('L-rhoegxgzTh-tau'+str(tau), L)
         print datetime.datetime.now(),'Lambda, M and L computed for rho-e-gx-gz theory!'
     #-----------------------
     # Compute C(t) predicted
@@ -513,11 +560,15 @@ elif theory == 4:
     if compute_Ctpred == 'y':
         print datetime.datetime.now(),'Computing C(t) predicted for rho-e-gx-gz theory...'
         Ct                        = np.loadtxt('Ct_2e3steps-rhoegxgzTh')
-        C0                        = np.loadtxt('C0-rhoegxgzTh')
-        Lambda                    = np.loadtxt('Lambda-rhoegxgzTh')
-        Ctpredict, errorCtpredict = computeCtpredict(Ct,C0,Lambda)
+        Lambda                    = np.loadtxt('Lambda-rhoegxgzTh-tau'+str())
+        Ctpredict, errorCtpredict = computeCtpredict(Ct,Lambda)
         np.savetxt('Ctpredict-rhoegxgzTh', Ctpredict)
         np.savetxt('errorCtpredict-rhoegxgzTh', errorCtpredict)
+        print datetime.datetime.now(),'C(t) predicted computed for rho-e-gx-gz theory!'
+    if compute_CtpredLocal == 'y':
+        Ct             = np.loadtxt('Ct_2e3steps-rhoegxgzTh')
+        CtpredictLocal = computeCtpredictLocal(Ct)
+        np.savetxt('CtpredictLocal-rhoegxgzTh-v'+str(v0), CtpredictLocal)
         print datetime.datetime.now(),'C(t) predicted computed for rho-e-gx-gz theory!'
     #-------------------------------
     # Compute CG variables predicted
@@ -563,15 +614,17 @@ elif theory == 5:
 
         if system == 's':
             for i in range(nSteps):
+                print datetime.datetime.now(), 'Computing C(t) for e theory. Step', str(i)
                 Ct[i,:] = reshape_mv(((reshape_vm(c_ee[i,:]) + reshape_vm(c_ee[i,:]).T) / 2))
         elif system == 'f':
             for i in range(nSteps):
+                print datetime.datetime.now(), 'Computing C(t) for e theory. Step', str(i)
                 Ct[i,:] = reshape_mv(((pbc(reshape_vm(c_ee[i,:])) + pbc(reshape_vm(c_ee[i,:]).T)) / 2))
 
         C0      = reshape_vm(Ct[0,:])
         C0_stat = (C0 + C0.T) / 2
         np.savetxt('Ct_2e3steps-eTh', Ct)
-        np.savetxt('Ct_100steps-eTh', Ct[0:100,:])
+        np.savetxt('Ct_300steps-eTh', Ct[0:300,:])
         np.savetxt('C0-eTh', C0_stat)
         print datetime.datetime.now(),'C(t) computed for e theory!'
     #---------------
@@ -579,12 +632,12 @@ elif theory == 5:
     #---------------
     if compute_lambda == 'y':
         print datetime.datetime.now(),'Computing lambda, M and L for e theory...'
-        Ct         = np.loadtxt('Ct_100steps-eTh')
+        Ct         = np.loadtxt('Ct_300steps-eTh')
         C0         = np.loadtxt('C0-eTh')
         Lambda,M,L = computeLambda(Ct,C0)
-        np.savetxt('Lambda-eTh', Lambda)
-        np.savetxt('M-eTh', M)
-        np.savetxt('L-eTh', L)
+        np.savetxt('Lambda-eTh-tau'+str(tau), Lambda)
+        np.savetxt('M-eTh-tau'+str(tau), M)
+        np.savetxt('L-eTh-tau'+str(tau), L)
         print datetime.datetime.now(),'Lambda, M and L computed for e theory!'
     #-----------------------
     # Compute C(t) predicted
@@ -592,11 +645,15 @@ elif theory == 5:
     if compute_Ctpred == 'y':
         print datetime.datetime.now(),'Computing C(t) predicted for e theory...'
         Ct                        = np.loadtxt('Ct_2e3steps-eTh')
-        C0                        = np.loadtxt('C0-eTh')
-        Lambda                    = np.loadtxt('Lambda-eTh')
-        Ctpredict, errorCtpredict = computeCtpredict(Ct,C0,Lambda)
+        Lambda                    = np.loadtxt('Lambda-eTh-tau'+str())
+        Ctpredict, errorCtpredict = computeCtpredict(Ct,Lambda)
         np.savetxt('Ctpredict-eTh', Ctpredict)
         np.savetxt('errorCtpredict-eTh', errorCtpredict)
+        print datetime.datetime.now(),'C(t) predicted computed for e theory!'
+    if compute_CtpredLocal == 'y':
+        Ct             = np.loadtxt('Ct_2e3steps-eTh')
+        CtpredictLocal = computeCtpredictLocal(Ct)
+        np.savetxt('CtpredictLocal-eTh-v'+str(v0), CtpredictLocal)
         print datetime.datetime.now(),'C(t) predicted computed for e theory!'
     #-------------------------------
     # Compute CG variables predicted
