@@ -91,13 +91,13 @@ nStepsModel = 1000            #time to compute the prediction of CG variables
 tol         = 1e-3            #rcond in linalg.pinv. It will be use to compute R
 #tau and v0 for different number of nodes
 if nNodes == 112:
-    tau,v0  = 0.12,0.8        #time to which lambda will be calculated, and kinematic viscosity for local aproximation of C(t) predicted
+    tau,v0  = 0.12,0.6        #time to which lambda will be calculated, and kinematic viscosity for local aproximation of C(t) predicted
 elif nNodes == 56:
     tau,v0  = 0.18,1.5
 elif nNodes == 28:
-    tau,v0  = 0.29,1.5
+    tau,v0  = 0.29,1.7
 elif nNodes == 14:
-    tau,v0  = 0.58,1.9
+    tau,v0  = 0.40,1.9
 #Number of blocks of C(t) and number of variables
 if theory == 1:
     nBlocks = 4
@@ -186,14 +186,16 @@ def computeCtpredict(Ct,Lambda):
 
 #C(t) predicted for local aproximation.
 def computeCtpredictLocal(Ct):
-    CtpredictLocal = np.zeros((nSteps, nNodes**2*nBlocks))
+    CtpredictLocal      = np.zeros((nSteps, nNodes**2*nBlocks))
+    errorCtpredictLocal = np.zeros(nSteps)
     row = int(tau / dt)
     t   = 0
     for j in range(nSteps):
         print datetime.datetime.now(), 'Computing C(t) predicted (local aprox.). Step', str(j)
-        CtpredictLocal[j,:] = reshape_mv(expm(v0*laplacian*(t-tau)).dot(reshape_vm(Ct[row])))
+        CtpredictLocal[j,:]    = reshape_mv(expm(v0*laplacian*(t-tau)).dot(reshape_vm(Ct[row])))
+        errorCtpredictLocal[j] = frobenious(CtpredictLocal[j,:],Ct[j,:])
         t+=dt
-    return CtpredictLocal
+    return CtpredictLocal, errorCtpredictLocal
 
 #CG variables predicted
 def computeCGpredict(Lambda,V0):
@@ -263,20 +265,21 @@ if theory == 1:
         Ct                        = np.loadtxt('Ct_2e3steps-rhogzTh')
         Lambda                    = np.loadtxt('Lambda-rhogzTh-tau'+str())
         Ctpredict, errorCtpredict = computeCtpredict(Ct,Lambda)
-        np.savetxt('Ctpredict-rhogzTh', Ctpredict)
-        np.savetxt('errorCtpredict-rhogzTh', errorCtpredict)
+        np.savetxt('Ctpredict-rhogzTh-tau'+str(), Ctpredict)
+        np.savetxt('errorCtpredict-rhogzTh-tau'+str(), errorCtpredict)
         print datetime.datetime.now(),'C(t) predicted computed for rho-gz theory!'
     if compute_CtpredLocal == 'y':
-        Ct             = np.loadtxt('Ct_2e3steps-rhogzTh')
-        CtpredictLocal = computeCtpredictLocal(Ct)
+        Ct                                   = np.loadtxt('Ct_2e3steps-rhogzTh')
+        CtpredictLocal, errorCtpredictLocal = computeCtpredictLocal(Ct)
         np.savetxt('CtpredictLocal-rhogzTh-v'+str(v0), CtpredictLocal)
+        np.savetxt('errorCtpredictLocal-rhogzTh-v'+str(v0), errorCtpredictLocal)
         print datetime.datetime.now(),'C(t) predicted computed for rho-gz theory!'
     #-------------------------------
     # Compute CG variables predicted
     #-------------------------------
     if compute_CGpred == 'y':
         print datetime.datetime.now(), 'Computing CG variables for rho-gz theory...'
-        Lambda          = np.loadtxt('Lambda-rhogzTh')
+        Lambda          = np.loadtxt('Lambda-rhogzTh-tau'+str(tau))
         rho             = np.loadtxt('mesoDensity')
         gz              = np.loadtxt('mesoMomentum_z')
         rho0            = rho[0,:]
@@ -331,7 +334,7 @@ elif theory == 2:
         np.savetxt('Lambda-gxTh-tau'+str(tau), Lambda)
         np.savetxt('M-gxTh-tau'+str(tau), M)
         np.savetxt('L-gxTh-tau'+str(tau), L)
-        #for tau in np.arange(0.4,0.59,0.01):
+        #for tau in np.arange(0.30,0.40,0.01):
         #    Lambda,M,L = computeLambda(Ct,C0)
         #    np.savetxt('Lambda-gxTh-tau'+str(tau), Lambda)
         #    np.savetxt('M-gxTh-tau'+str(tau), M)
@@ -347,27 +350,28 @@ elif theory == 2:
         Ctpredict, errorCtpredict = computeCtpredict(Ct,Lambda)
         np.savetxt('Ctpredict-gxTh-tau'+str(tau), Ctpredict)
         np.savetxt('errorCtpredict-gxTh-tau'+str(tau), errorCtpredict)
-        #for tau in np.arange(0.4,0.59,0.01):
+        #for tau in np.arange(0.30,0.40,0.01):
         #    Lambda                    = np.loadtxt('Lambda-gxTh-tau'+str(tau))
         #    Ctpredict, errorCtpredict = computeCtpredict(Ct,Lambda)
         #    np.savetxt('Ctpredict-gxTh-tau'+str(tau), Ctpredict)
         #    np.savetxt('errorCtpredict-gxTh-tau'+str(tau), errorCtpredict)
         print datetime.datetime.now(),'C(t) predicted computed for gx theory!'
     if compute_CtpredLocal == 'y':
-        Ct             = np.loadtxt('Ct_2e3steps-gxTh')
-        CtpredictLocal = computeCtpredictLocal(Ct)
+        Ct                                  = np.loadtxt('Ct_2e3steps-gxTh')
+        CtpredictLocal, errorCtpredictLocal = computeCtpredictLocal(Ct)
         np.savetxt('CtpredictLocal-gxTh-v'+str(v0), CtpredictLocal)
-        #for v0 in np.arange(1.5,2.5,0.1):
-        #    tau = 0.58
-        #    CtpredictLocal = computeCtpredictLocal(Ct)
+        np.savetxt('errorCtpredictLocal-gxTh-v'+str(v0), errorCtpredictLocal)
+        #for v0 in np.arange(0.3,1.2,0.1):
+        #    CtpredictLocal, errorCtpredictLocal = computeCtpredictLocal(Ct)
         #    np.savetxt('CtpredictLocal-gxTh-v'+str(v0), CtpredictLocal)
+        #    np.savetxt('errorCtpredictLocal-gxTh-v'+str(v0), errorCtpredictLocal)
         print datetime.datetime.now(),'C(t) predicted computed for gx theory!'
     #-------------------------------
     # Compute CG variables predicted
     #-------------------------------
     if compute_CGpred == 'y':
         print datetime.datetime.now(), 'Computing CG variables for gx theory...'
-        Lambda         = np.loadtxt('Lambda-gxTh')
+        Lambda         = np.loadtxt('Lambda-gxTh-tau'+str(tau))
         gx             = np.loadtxt('mesoMomentum_x')
         gx0            = gx[0,:]
         gxPredict      = computeCGpredict(Lambda, gx0)
@@ -445,20 +449,21 @@ elif theory == 3:
         Ct                        = np.loadtxt('Ct_2e3steps-rhoegzTh')
         Lambda                    = np.loadtxt('Lambda-rhoegzTh-tau'+str())
         Ctpredict, errorCtpredict = computeCtpredict(Ct,Lambda)
-        np.savetxt('Ctpredict-rhoegzTh', Ctpredict)
-        np.savetxt('errorCtpredict-rhoegzTh', errorCtpredict)
+        np.savetxt('Ctpredict-rhoegzTh-tau'+str(tau), Ctpredict)
+        np.savetxt('errorCtpredict-rhoegzTh-tau'+str(tau), errorCtpredict)
         print datetime.datetime.now(),'C(t) predicted computed for rho-e-gz theory!'
     if compute_CtpredLocal == 'y':
-        Ct             = np.loadtxt('Ct_2e3steps-rhoegzTh')
-        CtpredictLocal = computeCtpredictLocal(Ct)
+        Ct                                  = np.loadtxt('Ct_2e3steps-rhoegzTh')
+        CtpredictLocal, errorCtpredictLocal = computeCtpredictLocal(Ct)
         np.savetxt('CtpredictLocal-rhoegzTh-v'+str(v0), CtpredictLocal)
+        np.savetxt('errorCtpredictLocal-rhoegzTh-v'+str(v0), errorCtpredictLocal)
         print datetime.datetime.now(),'C(t) predicted computed for rho-e-gz theory!'
     #-------------------------------
     # Compute CG variables predicted
     #-------------------------------
     if compute_CGpred == 'y':
         print datetime.datetime.now(), 'Computing CG variables for rho-e-gz theory...'
-        Lambda          = np.loadtxt('Lambda-rhoegzTh')
+        Lambda          = np.loadtxt('Lambda-rhoegzTh-tau'+str())
         rho             = np.loadtxt('mesoDensity')
         e               = np.loadtxt('mesoEnergy')
         gz              = np.loadtxt('mesoMomentum_z')
@@ -562,20 +567,21 @@ elif theory == 4:
         Ct                        = np.loadtxt('Ct_2e3steps-rhoegxgzTh')
         Lambda                    = np.loadtxt('Lambda-rhoegxgzTh-tau'+str())
         Ctpredict, errorCtpredict = computeCtpredict(Ct,Lambda)
-        np.savetxt('Ctpredict-rhoegxgzTh', Ctpredict)
-        np.savetxt('errorCtpredict-rhoegxgzTh', errorCtpredict)
+        np.savetxt('Ctpredict-rhoegxgzTh-tau'+str(tau), Ctpredict)
+        np.savetxt('errorCtpredict-rhoegxgzTh-tau'+str(tau), errorCtpredict)
         print datetime.datetime.now(),'C(t) predicted computed for rho-e-gx-gz theory!'
     if compute_CtpredLocal == 'y':
-        Ct             = np.loadtxt('Ct_2e3steps-rhoegxgzTh')
-        CtpredictLocal = computeCtpredictLocal(Ct)
+        Ct                                  = np.loadtxt('Ct_2e3steps-rhoegxgzTh')
+        CtpredictLocal, errorCtpredictLocal = computeCtpredictLocal(Ct)
         np.savetxt('CtpredictLocal-rhoegxgzTh-v'+str(v0), CtpredictLocal)
+        np.savetxt('errorCtpredictLocal-rhoegxgzTh-v'+str(v0), errorCtpredictLocal)
         print datetime.datetime.now(),'C(t) predicted computed for rho-e-gx-gz theory!'
     #-------------------------------
     # Compute CG variables predicted
     #-------------------------------
     if compute_CGpred == 'y':
         print datetime.datetime.now(), 'Computing CG variables for rho-e-gx-gz theory...'
-        Lambda          = np.loadtxt('Lambda-rhoegxgzTh')
+        Lambda          = np.loadtxt('Lambda-rhoegxgzTh-tau'+str(tau))
         rho             = np.loadtxt('mesoDensity')
         e               = np.loadtxt('mesoEnergy')
         gx              = np.loadtxt('mesoMomentum_x')
@@ -645,22 +651,23 @@ elif theory == 5:
     if compute_Ctpred == 'y':
         print datetime.datetime.now(),'Computing C(t) predicted for e theory...'
         Ct                        = np.loadtxt('Ct_2e3steps-eTh')
-        Lambda                    = np.loadtxt('Lambda-eTh-tau'+str())
+        Lambda                    = np.loadtxt('Lambda-eTh-tau'+str(tau))
         Ctpredict, errorCtpredict = computeCtpredict(Ct,Lambda)
-        np.savetxt('Ctpredict-eTh', Ctpredict)
-        np.savetxt('errorCtpredict-eTh', errorCtpredict)
+        np.savetxt('Ctpredict-eTh-tau'+str(tau), Ctpredict)
+        np.savetxt('errorCtpredict-eTh-tau'+str(tau), errorCtpredict)
         print datetime.datetime.now(),'C(t) predicted computed for e theory!'
     if compute_CtpredLocal == 'y':
-        Ct             = np.loadtxt('Ct_2e3steps-eTh')
-        CtpredictLocal = computeCtpredictLocal(Ct)
+        Ct                                  = np.loadtxt('Ct_2e3steps-eTh')
+        CtpredictLocal, errorCtpredictLocal = computeCtpredictLocal(Ct)
         np.savetxt('CtpredictLocal-eTh-v'+str(v0), CtpredictLocal)
+        np.savetxt('errorCtpredictLocal-eTh-v'+str(v0), errorCtpredictLocal)
         print datetime.datetime.now(),'C(t) predicted computed for e theory!'
     #-------------------------------
     # Compute CG variables predicted
     #-------------------------------
     if compute_CGpred == 'y':
         print datetime.datetime.now(), 'Computing CG variables for e theory...'
-        Lambda   = np.loadtxt('Lambda-eTh')
+        Lambda   = np.loadtxt('Lambda-eTh-tau'+str(tau))
         e        = np.loadtxt('mesoEnergy')
         e0       = e[0,:]
         ePredict = computeCGpredict(Lambda, e0)
