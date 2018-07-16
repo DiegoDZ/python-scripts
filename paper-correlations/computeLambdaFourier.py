@@ -5,7 +5,7 @@
 # for different time dependent matrices. It uses two ways
 # to obtain it: based on real and fourier space.
 #           Author: @DiegoDZ
-#           Date:   October 2017
+#           Date:   oct 2017
 #           Run:    >>> python computeLambdaFourier.py
 #---------------------------------------------------------
 
@@ -21,18 +21,24 @@ elif space == 'r':
     label = 'Real'
 
 #-------------------------------------------Input---------------------------------
-Ctinput            = np.loadtxt('Ct_2e3steps-gxTh')                                        #matrix of correlations
-tstart,tstop,tdump = 0.1,0.21,0.01                                                         #times in which the info will be save
-Lx,Ly,Lz           = 40.0,40.0,30.0                                                        #dimensions of the simulation box
-nNodes             = 60                                                                    #number of nodes
-dz                 = Lz / nNodes                                                           #bin size
-nBlocks            = 1                                                                     #number blocks of matrix of correlations
-nVar               = int(np.sqrt(nBlocks))                                                 #number variables
-dim                = nVar * nNodes                                                         #dimension matrix of correlations
-dt                 = 0.002                                                                 #time step
-tol                = 1e-3                                                                  #rcond in linalg.pinv. It will be use to compute Cinv
-nSteps             = 2000
-E                  = np.zeros((nNodes, nNodes), dtype = complex)                           #unitary matrix. It will be used for Fourier transforms
+#Ctinput            = np.loadtxt('Ct-gxTh')                                        #matrix of correlations
+#CtdevInput         = np.loadtxt('Ctdev-gxTh')                                     #derivative of matrix of correlations
+Ctinput            = np.loadtxt('Ct-gxTh-500steps')                              #matrix of correlations
+CtdevInput         = np.loadtxt('Ctdev-gxTh-500steps')                           #derivative of matrix of correlations
+#Eta                = np.loadtxt('viscosityt')
+tstart,tstop,tdump = 0.0,0.21,0.01                                                 #times in which the info will be save
+Lx,Ly,Lz           = 40.0,40.0,30.0                                                #dimensions of the simulation box
+nNodes             = 60                                                            #number of nodes
+dz                 = Lz / nNodes                                                   #bin size
+nBlocks            = 1                                                             #number blocks of matrix of correlations
+nVar               = int(np.sqrt(nBlocks))                                         #number variables
+dim                = nVar * nNodes                                                 #dimension matrix of correlations
+dt                 = 0.002                                                         #time step
+tol                = 1e-3                                                          #rcond in linalg.pinv. It will be use to compute Cinv
+#nSteps             = 15000
+nSteps             = 500
+
+E                  = np.zeros((nNodes, nNodes), dtype = complex)                   #unitary matrix. It will be used for Fourier transforms
 Einv               = np.zeros((nNodes, nNodes), dtype = complex)
 for mu in range(nNodes):
     for nu in range(nNodes):
@@ -91,6 +97,7 @@ if space == 'r':
         Ctinv   = avgDiag(reshape_vm(CtinvReal[row(t),:]))
         Lambda  = avgDiag(-reshape_vm(CtdevReal[row(t),:]).dot(reshape_vm(CtinvReal[row(t),:])))
         kinVisc = avgDiag(-reshape_vm(CtdevReal[row(t),:]).dot(reshape_vm(CtinvReal[row(t),:])).dot(linalg.pinv(laplacian, rcond=tol)))
+        CtCtinv0 = Ct.dot(reshape_vm(CtinvReal[row(0),:]))
         np.savetxt('C-gxTh-tau'+str(t), Ct2)
         np.savetxt('PULIDO-C-gxTh-tau'+str(t), Ct)
         #np.savetxt('PULIDO-Ct_2e3steps-gxTh-tau'+str(t), Ct)
@@ -102,274 +109,61 @@ if space == 'r':
 #------------------Fourier space ---------------------
 
 if space == 'f':
-    CtFourier    = np.zeros((nSteps, nNodes**2))
-    CtdevFourier = np.zeros((nSteps, nNodes**2))
-    CtinvFourier = np.zeros((nSteps, nNodes**2))
+    CtFourier      = np.zeros((nSteps, nNodes**2))
+    CtFourierDiag  = np.zeros((nSteps, nNodes))
+    EtaFourier     = np.zeros((nSteps, nNodes**2))
+    EtaFourierDiag = np.zeros((nSteps, nNodes))
+    CtdevFourier   = np.zeros((nSteps, nNodes**2))
+    CtinvFourier   = np.zeros((nSteps, nNodes**2))
+    CtCtinv0Fourier = np.zeros((nSteps, nNodes**2))
+    
     for i in range(nSteps):
-        CtFourier[i,:]    = reshape_mv(Einv.dot(pulir(reshape_vm(Ctinput[i,:]))).dot(E))
-        #CtFourier[i,:]    = reshape_mv(Einv.dot(reshape_vm(Ctinput[i,:])).dot(E))
-        CtinvFourier[i,:] = reshape_mv(linalg.pinv(reshape_vm(CtFourier[i,:]), rcond=tol))
-    for i in np.arange(1, nSteps-1, 1):
-        Ctforward       = reshape_vm(CtFourier[i+1,:])
-        Ctbackward      = reshape_vm(CtFourier[i-1,:])
-        CtdevFourier[i] = reshape_mv((Ctforward - Ctbackward) / (2 * dt))
+        #print i
+        CtFourier[i,:]       = reshape_mv(Einv.dot(pulir(reshape_vm(Ctinput[i,:]))).dot(E))
+        CtdevFourier[i,:]    = reshape_mv(Einv.dot(reshape_vm(CtdevInput[i,:])).dot(E))
+        CtFourierDiag[i,:]   = np.diag(Einv.dot(pulir(reshape_vm(Ctinput[i,:]))).dot(E))
+        #EtaFourier[i,:]      = reshape_mv(Einv.dot(reshape_vm(Eta[i,:])).dot(E))
+        #EtaFourierDiag[i,:]  = np.diag(Einv.dot(reshape_vm(Eta[i,:])).dot(E))
+        CtinvFourier[i,:]    = reshape_mv(linalg.pinv(reshape_vm(CtFourier[i,:]), rcond=tol))
+    #np.savetxt('CtFourier', CtFourier)
+    #np.savetxt('viscositytFourier', EtaFourier)
+    #np.savetxt('CtFourierDiag', CtFourierDiag)
+    #np.savetxt('viscositytFourierDiag', EtaFourierDiag)
+    #for i in np.arange(1, nSteps-1, 1):
+    #    print i 
+    #    Ctforward         = reshape_vm(CtFourier[i+1,:])
+    #    Ctbackward        = reshape_vm(CtFourier[i-1,:])
+    #    CtdevFourier[i,:] = reshape_mv((Ctforward - Ctbackward) / (2*dt))
+    #CtdevFourier0     = (reshape_vm(CtFourier[1,:])-reshape_vm(CtFourier[1,:].T)) / (2*dt)  #Zero because it is symmetric
+    #CtdevFourier[0,:] = reshape_mv(CtdevFourier0)
+    #np.savetxt('CtdevFourier-test2', reshape_vm(CtdevFourier[0,:]))
     #Take the diagonal for different times
-    for t in np.arange(tstart, tstop, tdump):
-        Ct      = np.diag(reshape_vm(CtFourier[row(t),:]))
-        Ctdev   = np.diag(reshape_vm(CtdevFourier[row(t),:]))
-        Ctinv   = np.diag(reshape_vm(CtinvFourier[row(t),:]))
-        Lambda  = np.diag(-reshape_vm(CtdevFourier[row(t),:]).dot(reshape_vm(CtinvFourier[row(t),:])))
-        kinVisc = -Lambda[1:nNodes]/np.diag(D.real)[1:nNodes]
-        np.savetxt('PULIDO-CtFourier_2e3steps-f-gxTh-tau'+str(t), Ct)
-        np.savetxt('PULIDO-CtdevFourier_2e3steps-f-gxTh-tau'+str(t), Ctdev[1:nNodes])
-        np.savetxt('PULIDO-CtinvFourier_2e3steps-f-gxTh-tau'+str(t), Ctinv[1:nNodes])
-        np.savetxt('PULIDO-LambdaFourier_2e3steps-f-gxTh-tau'+str(t), Lambda[1:nNodes])
-        np.savetxt('PULIDO-kinViscFourier_2e3steps-f-gxTh-tau'+str(t), kinVisc)
+    #for t in np.arange(tstart, tstop, tdump):
+    #    Ct            = np.diag(reshape_vm(CtFourier[row(t),:]))
+    #    Ctdev         = np.diag(reshape_vm(CtdevFourier[row(t),:]))
+    #    Ctinv         = np.diag(reshape_vm(CtinvFourier[row(t),:]))
+    #    Lambda        = np.diag(-reshape_vm(CtdevFourier[row(t),:]).dot(reshape_vm(CtinvFourier[row(t),:])))
+    #    kinVisc       = -Lambda[1:nNodes]/np.diag(D.real)[1:nNodes]
+    #    CtCtinv0      = np.diag(reshape_vm(CtCtinv0Fourier[row(t),:]))
+    #    #np.savetxt('PULIDO-CtFourier_2e3steps-f-gxTh-tau'+str(t), Ct)
+    #    #np.savetxt('PULIDO-CtdevFourier_2e3steps-f-gxTh-tau'+str(t), Ctdev[1:nNodes])
+    #    #np.savetxt('PULIDO-CtinvFourier_2e3steps-f-gxTh-tau'+str(t), Ctinv[1:nNodes])
+    #    #np.savetxt('PULIDO-LambdaFourier-2e3steps-f-gxTh-tau'+str(t), Lambda[1:nNodes])
+    #    #np.savetxt('PULIDO-kinViscFourier_2e3steps-f-gxTh-tau'+str(t), kinVisc)
+    #    #np.savetxt('PULIDO-CtCtinv0Fourier_2e3steps-f-gxTh-tau'+str(t), CtCtinv0)
     #t = 0
     #Ct      = np.diag(reshape_vm(CtFourier[row(t),:]))
     #np.savetxt('CtFourier_2e3steps-f-gxTh-t'+str(t), Ct)
 
-"""
-#------------------------------------------------------------------------------------------------
-#                                   Figures
-#------------------------------------------------------------------------------------------------
-#Plot results - fourier space
-#Load files
-Ct0        = np.loadtxt('Ct_2e3steps-gxTh-t0')
-Ct02       = np.loadtxt('Ct_2e3steps-gxTh-t0.2')
-Ct04       = np.loadtxt('Ct_2e3steps-gxTh-t0.4')
-Ct2        = np.loadtxt('Ct_2e3steps-gxTh-t2')
-Ct5        = np.loadtxt('Ct_2e3steps-gxTh-t5')
-Ct10       = np.loadtxt('Ct_2e3steps-gxTh-t10')
-Ct15       = np.loadtxt('Ct_2e3steps-gxTh-t15')
-
-Ctdev02    = np.loadtxt('Ctdev_2e3steps-gxTh-t0.2')
-Ctdev04    = np.loadtxt('Ctdev_2e3steps-gxTh-t0.4')
-Ctdev2     = np.loadtxt('Ctdev_2e3steps-gxTh-t2')
-Ctdev5     = np.loadtxt('Ctdev_2e3steps-gxTh-t5')
-Ctdev15    = np.loadtxt('Ctdev_2e3steps-gxTh-t15')
-
-Ctinv02    = np.loadtxt('Ctinv_2e3steps-gxTh-t0.2')
-Ctinv04    = np.loadtxt('Ctinv_2e3steps-gxTh-t0.4')
-Ctinv5     = np.loadtxt('Ctinv_2e3steps-gxTh-t5')
-Ctinv15    = np.loadtxt('Ctinv_2e3steps-gxTh-t15')
-
-Lambdat02  = np.loadtxt('Lambda_2e3steps-gxTh-t15')
-Lambdat04  = np.loadtxt('Lambda_2e3steps-gxTh-t0')
-Lambdat5   = np.loadtxt('Lambda_2e3steps-gxTh-t0.4')
-Lambdat15  = np.loadtxt('Lambda_2e3steps-gxTh-t15')
-
-kinVisct02 = np.loadtxt('kinVisc_2e3steps-gxTh-t0.2')
-kinVisct04 = np.loadtxt('kinVisc_2e3steps-gxTh-t0.4')
-kinVisct5  = np.loadtxt('kinVisc_2e3steps-gxTh-t5')
-kinVisct15 = np.loadtxt('kinVisc_2e3steps-gxTh-t15')
-
-plt.figure()
-ax = plt.gca()
-ax.ticklabel_format(style='sci', axis='y', scilimits=(0,0))
-ax.grid()
-plt.plot(Ct0, linestyle='-', color='k')
-plt.hold('on')
-plt.plot(Ct02, linestyle='-', color='r')
-plt.hold('on')
-plt.plot(Ct04, linestyle='-', color='g')
-plt.hold('on')
-plt.plot(Ct2, linestyle='-', color='m')
-plt.hold('on')
-plt.plot(Ct5, linestyle='-', color='grey')
-plt.hold('on')
-plt.plot(Ct10, linestyle='-', color='c')
-plt.hold('on')
-plt.plot(Ct15, linestyle='-', color='y')
-plt.xlabel('')
-plt.ylabel('')
-plt.legend(['$C(t=0)$', '$C(t=0.2)$', '$C(t=0.4)$', '$C(t=2)$', '$C(t=5)$', '$C(t=10)$', '$C(t=15)$'], borderpad=0.1, prop={'size':10})
-plt.title('$C(t)$')
-plt.savefig('CtFrames-56n.eps')
-
-plt.figure()
-ax = plt.gca()
-ax.ticklabel_format(style='sci', axis='y', scilimits=(0,0))
-ax.grid()
-plt.plot(Ctdev02, linestyle='-', color='r')
-plt.hold('on')
-plt.plot(Ctdev04, linestyle='-', color='g')
-plt.hold('on')
-plt.plot(Ctdev5, linestyle='-', color='grey')
-plt.hold('on')
-plt.plot(Ctdev15, linestyle='-', color='y')
-plt.xlabel('')
-plt.ylabel('')
-plt.legend(['$\dot{C}(t=0.2)$', '$\dot{C}(t=0.4)$', '$\dot{C}(t=5)$', '$\dot{C}(t=15)$'], borderpad=0.1, prop={'size':10})
-plt.title('$\dot{C}(t)$')
-plt.savefig('CtdevFrames-56n.eps')
-
-plt.figure()
-ax = plt.gca()
-ax.ticklabel_format(style='sci', axis='y', scilimits=(0,0))
-plt.ylim((-4e-5, 3e-5))
-ax.grid()
-plt.plot(Ctdev02, linestyle='-', color='r')
-plt.hold('on')
-plt.plot(Ctdev04, linestyle='-', color='g')
-plt.hold('on')
-plt.plot(Ctdev5, linestyle='-', color='grey')
-plt.xlabel('')
-plt.ylabel('')
-plt.legend(['$\dot{C}(t=0.2)$', '$\dot{C}(t=0.4)$', '$\dot{C}(t=5)$', '$\dot{C}(t=15)$'], borderpad=0.1, prop={'size':10})
-plt.title('$\dot{C}(t)$')
-plt.savefig('CtdevFrames-56n-zoom.eps')
-
-plt.figure()
-ax = plt.gca()
-ax.ticklabel_format(style='sci', axis='y', scilimits=(0,0))
-ax.grid()
-plt.plot(Ctinv02, linestyle='-', color='r')
-plt.hold('on')
-plt.plot(Ctinv04, linestyle='-', color='g')
-plt.hold('on')
-plt.plot(Ctinv5, linestyle='-', color='grey')
-plt.hold('on')
-plt.plot(Ctinv15, linestyle='-', color='y')
-plt.xlabel('')
-plt.ylabel('')
-plt.legend(['$C^{-1}(t=0.2)$', '$C^{-1}(t=0.4)$', '$C^{-1}(t=5)$', '$C^{-1}(t=15)$'], borderpad=0.1, prop={'size':10})
-plt.title('$C^{-1}(t)$')
-plt.savefig('CtinvFrames-56n.eps')
-
-plt.figure()
-ax = plt.gca()
-ax.ticklabel_format(style='sci', axis='y', scilimits=(0,0))
-plt.ylim((-5e4, 1e5))
-ax.grid()
-plt.plot(Ctinv02, linestyle='-', color='r')
-plt.hold('on')
-plt.plot(Ctinv04, linestyle='-', color='g')
-plt.hold('on')
-plt.plot(Ctinv5, linestyle='-', color='grey')
-plt.xlabel('')
-plt.ylabel('')
-plt.legend(['$C^{-1}(t=0.2)$', '$C^{-1}(t=0.4)$', '$C^{-1}(t=5)$', '$C^{-1}(t=15)$'], borderpad=0.1, prop={'size':10})
-plt.title('$C^{-1}(t)$')
-plt.savefig('CtinvFrames-56n-zoom.eps')
-
-#Plot results - fourier space
-#Load files
-Ct0        = np.loadtxt('CtFourier_2e3steps-gxTh-t0')
-Ct02       = np.loadtxt('CtFourier_2e3steps-gxTh-t0.2')
-Ct04       = np.loadtxt('CtFourier_2e3steps-gxTh-t0.4')
-Ct2        = np.loadtxt('CtFourier_2e3steps-gxTh-t2')
-Ct5        = np.loadtxt('CtFourier_2e3steps-gxTh-t5')
-Ct10       = np.loadtxt('CtFourier_2e3steps-gxTh-t10')
-Ct15       = np.loadtxt('CtFourier_2e3steps-gxTh-t15')
-
-Ctdev02    = np.loadtxt('CtdevFourier_2e3steps-gxTh-t0.2')
-Ctdev04    = np.loadtxt('CtdevFourier_2e3steps-gxTh-t0.4')
-Ctdev2     = np.loadtxt('CtdevFourier_2e3steps-gxTh-t2')
-Ctdev5     = np.loadtxt('CtdevFourier_2e3steps-gxTh-t5')
-Ctdev15    = np.loadtxt('CtdevFourier_2e3steps-gxTh-t15')
-
-Ctinv02    = np.loadtxt('CtinvFourier_2e3steps-gxTh-t0.2')
-Ctinv04    = np.loadtxt('CtinvFourier_2e3steps-gxTh-t0.4')
-Ctinv5     = np.loadtxt('CtinvFourier_2e3steps-gxTh-t5')
-Ctinv15    = np.loadtxt('CtinvFourier_2e3steps-gxTh-t15')
-
-#Lambdat02  = np.loadtxt('LambdaFourier_2e3steps-gxTh-t15')
-#Lambdat04  = np.loadtxt('LambdaFourier_2e3steps-gxTh-t0')
-#Lambdat5   = np.loadtxt('LambdaFourier_2e3steps-gxTh-t0.4')
-#Lambdat15  = np.loadtxt('LambdaFourier_2e3steps-gxTh-t15')
-
-#kinVisct02 = np.loadtxt('kinVisc_2e3steps-gxTh-t0.2')
-#kinVisct04 = np.loadtxt('kinVisc_2e3steps-gxTh-t0.4')
-#kinVisct5  = np.loadtxt('kinVisc_2e3steps-gxTh-t5')
-#kinVisct15 = np.loadtxt('kinVisc_2e3steps-gxTh-t15')
-
-plt.figure()
-ax = plt.gca()
-ax.ticklabel_format(style='sci', axis='y', scilimits=(0,0))
-ax.grid()
-plt.plot(Ct0, linestyle='-', color='k')
-plt.hold('on')
-plt.plot(Ct02, linestyle='-', color='r')
-plt.hold('on')
-plt.plot(Ct04, linestyle='-', color='g')
-plt.hold('on')
-plt.plot(Ct2, linestyle='-', color='m')
-plt.hold('on')
-plt.plot(Ct5, linestyle='-', color='grey')
-plt.hold('on')
-plt.plot(Ct10, linestyle='-', color='c')
-plt.hold('on')
-plt.plot(Ct15, linestyle='-', color='y')
-plt.xlabel('')
-plt.ylabel('')
-plt.legend(['$C(t=0)$', '$C(t=0.2)$', '$C(t=0.4)$', '$C(t=2)$', '$C(t=5)$', '$C(t=10)$', '$C(t=15)$'], borderpad=0.1, prop={'size':10})
-plt.title('$\tilde{C}(t)$')
-plt.savefig('CtFrames-56n-Fourier.eps')
-
-plt.figure()
-ax = plt.gca()
-ax.ticklabel_format(style='sci', axis='y', scilimits=(0,0))
-ax.grid()
-plt.plot(Ctdev02, linestyle='-', color='r')
-plt.hold('on')
-plt.plot(Ctdev04, linestyle='-', color='g')
-plt.hold('on')
-plt.plot(Ctdev5, linestyle='-', color='grey')
-plt.hold('on')
-plt.plot(Ctdev15, linestyle='-', color='y')
-plt.xlabel('')
-plt.ylabel('')
-plt.legend(['$\dot{C}(t=0.2)$', '$\dot{C}(t=0.4)$', '$\dot{C}(t=5)$', '$\dot{C}(t=15)$'], borderpad=0.1, prop={'size':10})
-plt.title('$\dot{C}(t)$')
-plt.savefig('CtdevFrames-56n-Fourier.eps')
-
-plt.figure()
-ax = plt.gca()
-ax.ticklabel_format(style='sci', axis='y', scilimits=(0,0))
-plt.ylim((-4e-5, 3e-5))
-ax.grid()
-plt.plot(Ctdev02, linestyle='-', color='r')
-plt.hold('on')
-plt.plot(Ctdev04, linestyle='-', color='g')
-plt.hold('on')
-plt.plot(Ctdev5, linestyle='-', color='grey')
-plt.xlabel('')
-plt.ylabel('')
-plt.legend(['$\dot{C}(t=0.2)$', '$\dot{C}(t=0.4)$', '$\dot{C}(t=5)$', '$\dot{C}(t=15)$'], borderpad=0.1, prop={'size':10})
-plt.title('$\dot{C}(t)$')
-plt.savefig('CtdevFrames-56n-zoom.eps')
-
-plt.figure()
-ax = plt.gca()
-ax.ticklabel_format(style='sci', axis='y', scilimits=(0,0))
-ax.grid()
-plt.plot(Ctinv02, linestyle='-', color='r')
-plt.hold('on')
-plt.plot(Ctinv04, linestyle='-', color='g')
-plt.hold('on')
-plt.plot(Ctinv5, linestyle='-', color='grey')
-plt.hold('on')
-plt.plot(Ctinv15, linestyle='-', color='y')
-plt.xlabel('')
-plt.ylabel('')
-plt.legend(['$C^{-1}(t=0.2)$', '$C^{-1}(t=0.4)$', '$C^{-1}(t=5)$', '$C^{-1}(t=15)$'], borderpad=0.1, prop={'size':10})
-plt.title('$C^{-1}(t)$')
-plt.savefig('CtinvFrames-56n.eps')
-
-plt.figure()
-ax = plt.gca()
-ax.ticklabel_format(style='sci', axis='y', scilimits=(0,0))
-plt.ylim((-5e4, 1e5))
-ax.grid()
-plt.plot(Ctinv02, linestyle='-', color='r')
-plt.hold('on')
-plt.plot(Ctinv04, linestyle='-', color='g')
-plt.hold('on')
-plt.plot(Ctinv5, linestyle='-', color='grey')
-plt.xlabel('')
-plt.ylabel('')
-plt.legend(['$C^{-1}(t=0.2)$', '$C^{-1}(t=0.4)$', '$C^{-1}(t=5)$', '$C^{-1}(t=15)$'], borderpad=0.1, prop={'size':10})
-plt.title('$C^{-1}(t)$')
-plt.savefig('CtinvFrames-56n-zoom.eps')
-"""
+    #Calculate the evolution of the modes of Lambda
+    Lambdat = np.zeros((nSteps-1, nNodes))
+    for step in range(nSteps-1):
+        print step
+        Lambda          = np.diag(-reshape_vm(CtdevFourier[step,:]).dot(reshape_vm(CtinvFourier[step,:])))
+        Lambdat[step,:] = Lambda
+    #Save files
+    for k in np.arange(1,nNodes+1,1):
+        np.savetxt('LambdaFourier-k'+str(k)+'.dat',  Lambdat[:,k-1])
+    print CtdevFourier[0,:]
+    
+#EOF

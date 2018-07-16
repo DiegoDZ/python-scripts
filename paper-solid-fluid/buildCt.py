@@ -21,13 +21,15 @@ SxzFx    = raw_input("Do you want to build <Sxz(t)Sxz>, <Sxz(t)Fx>, <Fx(t)Sxz>, 
 #----------------------------------
 #Inputs
 #----------------------------------
-nSteps, nCols = 7500, 400
-nNodes        = 61
-nBlocks       = 1                                         #Do not confuse with the number of blocks we will use to build the matrix
+nSteps, nCols = 7500, 49
+nNodes        = 17                                       #Number of fluid nodes 
+nBlocks       = 1                                        #Do not confuse with the number of blocks we will use to build the matrix
                                                           #of correlations C(t). This number of blocks refers to the number of different
                                                           #correlation files (i.e. <gxgx(t)>, <gxrho(t)> ...).
                                                           #In this case the number of blocks is only one because the matrix of
                                                           #correlations will be <gxgx(t)>.
+
+nBlocks       = 1                                         #Do not confuse with the number of blocks we will use to build the matrix
 sBlocks       = int(np.sqrt(nBlocks))
 dim           = sBlocks * nNodes
 #We define the number of nodes for the blocks calculated with LAMMPS. Note the different between the number of nodes of C(t) and the number of nodes of block1 and block2.
@@ -66,6 +68,29 @@ def avgBlocks(B1,B2):
     reshapeBlock_vm(B2)[0:-1, 0:-1] = np.rot90(A,2)
     B1avg = reshapeBlock_mv(B1)
     B2avg = reshapeBlock_mv(B2)
+    return B1avg, B2avg
+
+def avgBlocks_SxzFx(SxzFxB1, SxzFxB2, FxSxzB1, FxSxzB2):
+    B                 = np.zeros((nNodesBlock, nNodesBlock))
+    A1                = np.rot90(reshapeBlock_vm(-SxzFxB2)[:-1,:],2)
+    B[:-1,:]          = A1
+    A                 = 0.5 * (reshapeBlock_vm(SxzFxB1) + B)
+    corr_SxzFx_B1_avg = reshapeBlock_mv(A)
+    B                 = np.zeros((nNodesBlock, nNodesBlock))
+    B[:-1,:]          = -np.rot90(A[:-1,:],2)
+    corr_SxzFx_B2_avg = reshapeBlock_mv(B)
+
+    B                 = np.zeros((nNodesBlock, nNodesBlock))
+    A2                = np.rot90(reshapeBlock_vm(-FxSxzB2)[:,:-1],2)
+    B[:,:-1]          = A2
+    A                 = 0.5 * (reshapeBlock_vm(FxSxzB1) + B)
+    corr_FxSxz_B1_avg = reshapeBlock_mv(A)
+    B                 = np.zeros((nNodesBlock, nNodesBlock))
+    B[:,:-1]          = -np.rot90(A[:,:-1],2)
+    corr_FxSxz_B2_avg = reshapeBlock_mv(B)
+    
+    B1avg             = 0.5 * (reshapeBlock_vm(corr_SxzFx_B1_avg) + reshapeBlock_vm(corr_FxSxz_B1_avg).T) 
+    B2avg             = 0.5 * (reshapeBlock_vm(corr_SxzFx_B2_avg) + reshapeBlock_vm(corr_FxSxz_B2_avg).T) 
     return B1avg, B2avg
 
 #Obtain the anti-diagonal (and the next one) of a block. Before that the subrutine use all the sub-anti-diagonals to increase the stat. of the main anti-diagonal.
@@ -128,6 +153,9 @@ if gxgx=='y':
 
     block1 = np.loadtxt('corr-gxgx-WALLS-block1-AVG.dat')
     block2 = np.loadtxt('corr-gxgx-WALLS-block2-AVG.dat')
+    
+    nRows, nCols = np.shape(block1)
+    nNodesBlock  = int(np.sqrt(nCols))
 
     corr_gxgx_B1_avg   = np.zeros((nSteps, nNodesBlock**2))
     corr_gxgx_B2_avg   = np.zeros((nSteps, nNodesBlock**2))
@@ -140,10 +168,10 @@ if gxgx=='y':
         corr_gxgx_B1_avg[t,:] = reshapeBlock_mv(A)
         corr_gxgx_B2_avg[t,:] = reshapeBlock_mv(np.rot90(A,2))
     
-    np.savetxt('C-WALLS-WALLS-t0.dat'   , reshapeBlock_vm(corr_gxgx_B1_avg[0,:]))
-    np.savetxt('C-WALLS-WALLS-t0.2.dat' , reshapeBlock_vm(corr_gxgx_B1_avg[50,:]))
-    np.savetxt('C-WALLS-WALLS-t0.dat'   , reshapeBlock_vm(corr_gxgx_B2_avg[0,:]))
-    np.savetxt('C-WALLS-WALLS-t0.2.dat' , reshapeBlock_vm(corr_gxgx_B2_avg[50,:]))
+    #np.savetxt('C-WALLS-B1-t0.dat'   , reshapeBlock_vm(corr_gxgx_B1_avg[0,:]))
+    np.savetxt('C-WALLS-B1-t0.2.dat' , reshapeBlock_vm(corr_gxgx_B1_avg[50,:]))
+    #np.savetxt('C-WALLS-B2-t0.dat'   , reshapeBlock_vm(corr_gxgx_B2_avg[0,:]))
+    np.savetxt('C-WALLS-B2-t0.2.dat' , reshapeBlock_vm(corr_gxgx_B2_avg[50,:]))
 
     C = np.zeros((nSteps,nNodes**2))
     for t in range(nSteps):
@@ -195,22 +223,22 @@ if SxzFx == 'y':
         corr_FxFx_B1[t,:]   = reshapeBlock_mv(B1[1*nNodesBlock:2*nNodesBlock, 1*nNodesBlock:2*nNodesBlock])
         corr_FxFx_B2[t,:]   = reshapeBlock_mv(B2[1*nNodesBlock:2*nNodesBlock, 1*nNodesBlock:2*nNodesBlock])
    
-    np.savetxt('corr-SxzSxz-WALLS-B1-t0.dat'  , reshapeBlock_vm(corr_SxzSxz_B1[0,:]))
-    np.savetxt('corr-SxzSxz-WALLS-B2-t0.dat'  , reshapeBlock_vm(corr_SxzSxz_B2[0,:]))
-    np.savetxt('corr-SxzFx-WALLS-B1-t0.dat'   , reshapeBlock_vm(corr_SxzFx_B1[0,:]))
-    np.savetxt('corr-SxzFx-WALLS-B2-t0.dat'   , reshapeBlock_vm(corr_SxzFx_B2[0,:]))
-    np.savetxt('corr-FxSxz-WALLS-B1-t0.dat'   , reshapeBlock_vm(corr_FxSxz_B1[0,:]))
-    np.savetxt('corr-FxSxz-WALLS-B2-t0.dat'   , reshapeBlock_vm(corr_FxSxz_B2[0,:]))
-    np.savetxt('corr-FxFx-WALLS-B1-t0.dat'    , reshapeBlock_vm(corr_FxFx_B1[0,:]))
-    np.savetxt('corr-FxFx-WALLS-B2-t0.dat'    , reshapeBlock_vm(corr_FxFx_B2[0,:]))
-    np.savetxt('corr-SxzSxz-WALLS-B1-t0.2.dat', reshapeBlock_vm(corr_SxzSxz_B1[50,:]))
-    np.savetxt('corr-SxzSxz-WALLS-B2-t0.2.dat', reshapeBlock_vm(corr_SxzSxz_B2[50,:]))
-    np.savetxt('corr-SxzFx-WALLS-B1-t0.2.dat' , reshapeBlock_vm(corr_SxzFx_B1[50,:]))
-    np.savetxt('corr-SxzFx-WALLS-B2-t0.2.dat' , reshapeBlock_vm(corr_SxzFx_B2[50,:]))
-    np.savetxt('corr-FxSxz-WALLS-B1-t0.2.dat' , reshapeBlock_vm(corr_FxSxz_B1[50,:]))
-    np.savetxt('corr-FxSxz-WALLS-B2-t0.2.dat' , reshapeBlock_vm(corr_FxSxz_B2[50,:]))
-    np.savetxt('corr-FxFx-WALLS-B1-t0.2.dat'  , reshapeBlock_vm(corr_FxFx_B1[50,:]))
-    np.savetxt('corr-FxFx-WALLS-B2-t0.2.dat'  , reshapeBlock_vm(corr_FxFx_B2[50,:]))
+    #np.savetxt('SxzSxz-WALLS-B1-t0.dat'  , reshapeBlock_vm(corr_SxzSxz_B1[0,:]))
+    #np.savetxt('SxzSxz-WALLS-B2-t0.dat'  , reshapeBlock_vm(corr_SxzSxz_B2[0,:]))
+    #np.savetxt('SxzFx-WALLS-B1-t0.dat'   , reshapeBlock_vm(corr_SxzFx_B1[0,:]))
+    #np.savetxt('SxzFx-WALLS-B2-t0.dat'   , reshapeBlock_vm(corr_SxzFx_B2[0,:]))
+    #np.savetxt('FxSxz-WALLS-B1-t0.dat'   , reshapeBlock_vm(corr_FxSxz_B1[0,:]))
+    #np.savetxt('FxSxz-WALLS-B2-t0.dat'   , reshapeBlock_vm(corr_FxSxz_B2[0,:]))
+    #np.savetxt('FxFx-WALLS-B1-t0.dat'    , reshapeBlock_vm(corr_FxFx_B1[0,:]))
+    #np.savetxt('FxFx-WALLS-B2-t0.dat'    , reshapeBlock_vm(corr_FxFx_B2[0,:]))
+    #np.savetxt('SxzSxz-WALLS-B1-t0.2.dat', reshapeBlock_vm(corr_SxzSxz_B1[50,:]))
+    #np.savetxt('SxzSxz-WALLS-B2-t0.2.dat', reshapeBlock_vm(corr_SxzSxz_B2[50,:]))
+    #np.savetxt('SxzFx-WALLS-B1-t0.2.dat' , reshapeBlock_vm(corr_SxzFx_B1[50,:]))
+    #np.savetxt('SxzFx-WALLS-B2-t0.2.dat' , reshapeBlock_vm(corr_SxzFx_B2[50,:]))
+    #np.savetxt('FxSxz-WALLS-B1-t0.2.dat' , reshapeBlock_vm(corr_FxSxz_B1[50,:]))
+    #np.savetxt('FxSxz-WALLS-B2-t0.2.dat' , reshapeBlock_vm(corr_FxSxz_B2[50,:]))
+    #np.savetxt('FxFx-WALLS-B1-t0.2.dat'  , reshapeBlock_vm(corr_FxFx_B1[50,:]))
+    #np.savetxt('FxFx-WALLS-B2-t0.2.dat'  , reshapeBlock_vm(corr_FxFx_B2[50,:]))
 
 #---------------Average blocks---------------
 
@@ -231,35 +259,33 @@ if SxzFx == 'y':
         B2avg = reshapeBlock_mv(0.5*(reshapeBlock_vm(B2avg)+ reshapeBlock_vm(B2avg).T))   #symmetric
         corr_SxzSxz_B1_avg[t,:] = B1avg
         corr_SxzSxz_B2_avg[t,:] = B2avg
-        #<Sxz(t)Fx>  Yes, I know that the next piece of code does nothing. It is pending to write a subrutine which average the blocks of <Sxz(t)Fx> and <Fx(t)Sxz>
-        corr_SxzFx_B1_avg[t,:] = corr_SxzFx_B1[t,:]
-        corr_SxzFx_B2_avg[t,:] = corr_SxzFx_B2[t,:]
-        #<Fx(t)Sxz>
-        corr_FxSxz_B1_avg[t,:] = corr_FxSxz_B1[t,:]
-        corr_FxSxz_B2_avg[t,:] = corr_FxSxz_B2[t,:]
+        #<Sxz(t)Fx> and <Sxz(t)Fx>
+        B1avg, B2avg = avgBlocks_SxzFx(corr_SxzFx_B1[t,:], corr_SxzFx_B2[t,:], corr_FxSxz_B1[t,:], corr_FxSxz_B2[t,:] )
+        corr_SxzFx_B1_avg[t,:] = reshapeBlock_mv(B1avg)
+        corr_SxzFx_B2_avg[t,:] = reshapeBlock_mv(B2avg)
+        corr_FxSxz_B1_avg[t,:] = reshapeBlock_mv(B1avg.T)
+        corr_FxSxz_B2_avg[t,:] = reshapeBlock_mv(B2avg.T)
         #<Fx(t)Fxz>  Note the difference between the following piece of code and the later one. This is because the force is defined in nodes and the stress tensor in bins -> there is an extra zero
         A = 0.5 * (reshapeBlock_vm(corr_FxFx_B1[t,:]) + np.rot90(reshapeBlock_vm(corr_FxFx_B2[t,:]),2))
         corr_FxFx_B1_avg[t,:] = reshapeBlock_mv(A)
         corr_FxFx_B2_avg[t,:] = reshapeBlock_mv(np.rot90(A,2))
-        corr_FxFx_B1_avg[t,:] = corr_FxFx_B1[t,:]
-        corr_FxFx_B2_avg[t,:] = corr_FxFx_B2[t,:]
 
-    np.savetxt('corr-SxzSxz-WALLS-B1-avg-t0.dat'  , reshapeBlock_vm(corr_SxzSxz_B1_avg[0,:]))
-    np.savetxt('corr-SxzSxz-WALLS-B2-avg-t0.dat'  , reshapeBlock_vm(corr_SxzSxz_B2_avg[0,:]))
-    np.savetxt('corr-SxzFx-WALLS-B1-avg-t0.dat'   , reshapeBlock_vm(corr_SxzFx_B1_avg[0,:]))
-    np.savetxt('corr-SxzFx-WALLS-B2-avg-t0.dat'   , reshapeBlock_vm(corr_SxzFx_B2_avg[0,:]))
-    np.savetxt('corr-FxSxz-WALLS-B1-avg-t0.dat'   , reshapeBlock_vm(corr_FxSxz_B1_avg[0,:]))
-    np.savetxt('corr-FxSxz-WALLS-B2-avg-t0.dat'   , reshapeBlock_vm(corr_FxSxz_B2_avg[0,:]))
-    np.savetxt('corr-FxFx-WALLS-B1-avg-t0.dat'    , reshapeBlock_vm(corr_FxFx_B1_avg[0,:]))
-    np.savetxt('corr-FxFx-WALLS-B2-avg-t0.dat'    , reshapeBlock_vm(corr_FxFx_B2_avg[0,:]))
-    np.savetxt('corr-SxzSxz-WALLS-B1-avg-t0.2.dat', reshapeBlock_vm(corr_SxzSxz_B1_avg[50,:]))
-    np.savetxt('corr-SxzSxz-WALLS-B2-avg-t0.2.dat', reshapeBlock_vm(corr_SxzSxz_B2_avg[50,:]))
-    np.savetxt('corr-SxzFx-WALLS-B1-avg-t0.2.dat' , reshapeBlock_vm(corr_SxzFx_B1_avg[50,:]))
-    np.savetxt('corr-SxzFx-WALLS-B2-avg-t0.2.dat' , reshapeBlock_vm(corr_SxzFx_B2_avg[50,:]))
-    np.savetxt('corr-FxSxz-WALLS-B1-avg-t0.2.dat' , reshapeBlock_vm(corr_FxSxz_B1_avg[50,:]))
-    np.savetxt('corr-FxSxz-WALLS-B2-avg-t0.2.dat' , reshapeBlock_vm(corr_FxSxz_B2_avg[50,:]))
-    np.savetxt('corr-FxFx-WALLS-B1-avg-t0.2.dat'  , reshapeBlock_vm(corr_FxFx_B1_avg[50,:]))
-    np.savetxt('corr-FxFx-WALLS-B2-avg-t0.2.dat'  , reshapeBlock_vm(corr_FxFx_B2_avg[50,:]))
+    #np.savetxt('SxzSxz-WALLS-B1-avg-t0.dat'  , reshapeBlock_vm(corr_SxzSxz_B1_avg[0,:]))
+    #np.savetxt('SxzSxz-WALLS-B2-avg-t0.dat'  , reshapeBlock_vm(corr_SxzSxz_B2_avg[0,:]))
+    #np.savetxt('SxzFx-WALLS-B1-avg-t0.dat'   , reshapeBlock_vm(corr_SxzFx_B1_avg[0,:]))
+    #np.savetxt('SxzFx-WALLS-B2-avg-t0.dat'   , reshapeBlock_vm(corr_SxzFx_B2_avg[0,:]))
+    #np.savetxt('FxSxz-WALLS-B1-avg-t0.dat'   , reshapeBlock_vm(corr_FxSxz_B1_avg[0,:]))
+    #np.savetxt('FxSxz-WALLS-B2-avg-t0.dat'   , reshapeBlock_vm(corr_FxSxz_B2_avg[0,:]))
+    #np.savetxt('FxFx-WALLS-B1-avg-t0.dat'    , reshapeBlock_vm(corr_FxFx_B1_avg[0,:]))
+    #np.savetxt('FxFx-WALLS-B2-avg-t0.dat'    , reshapeBlock_vm(corr_FxFx_B2_avg[0,:]))
+    #np.savetxt('SxzSxz-WALLS-B1-avg-t0.2.dat', reshapeBlock_vm(corr_SxzSxz_B1_avg[50,:]))
+    #np.savetxt('SxzSxz-WALLS-B2-avg-t0.2.dat', reshapeBlock_vm(corr_SxzSxz_B2_avg[50,:]))
+    #np.savetxt('SxzFx-WALLS-B1-avg-t0.2.dat' , reshapeBlock_vm(corr_SxzFx_B1_avg[50,:]))
+    #np.savetxt('SxzFx-WALLS-B2-avg-t0.2.dat' , reshapeBlock_vm(corr_SxzFx_B2_avg[50,:]))
+    #np.savetxt('FxSxz-WALLS-B1-avg-t0.2.dat' , reshapeBlock_vm(corr_FxSxz_B1_avg[50,:]))
+    #np.savetxt('FxSxz-WALLS-B2-avg-t0.2.dat' , reshapeBlock_vm(corr_FxSxz_B2_avg[50,:]))
+    #np.savetxt('FxFx-WALLS-B1-avg-t0.2.dat'  , reshapeBlock_vm(corr_FxFx_B1_avg[50,:]))
+    #np.savetxt('FxFx-WALLS-B2-avg-t0.2.dat'  , reshapeBlock_vm(corr_FxFx_B2_avg[50,:]))
 
 #---------------Build matrices of correlations---------------
 
@@ -275,10 +301,10 @@ if SxzFx == 'y':
         Davg, D1avg                                             = avgDiag(B1)
         C[t,:]                                                  = reshape_mv(buildC(Z,Davg,D1avg))
         
-    np.savetxt('corr-SxzSxz-WALLS.dat'         , C)
-    np.savetxt('corr-SxzSxz-WALLS-500steps.dat', C[0:500])
-    np.savetxt('corr-SxzSxz-WALLS-t0.dat'      , reshape_vm(C[0,:]))
-    np.savetxt('corr-SxzSxz-WALLS-t0.2.dat'    , reshape_vm(C[50,:]))
+    np.savetxt('SxzSxz-WALLS.dat'         , C)
+    np.savetxt('SxzSxz-WALLS-500steps.dat', C[0:500])
+    np.savetxt('SxzSxz-WALLS-t0.dat'      , reshape_vm(C[0,:]))
+    np.savetxt('SxzSxz-WALLS-t0.2.dat'    , reshape_vm(C[50,:]))
 
     C1 = np.zeros((nSteps,nNodes**2))
     C2 = np.zeros((nSteps,nNodes**2))
@@ -289,18 +315,18 @@ if SxzFx == 'y':
         C2[t,:] = buildC2(corr_FxSxz_B1_avg[t,:], corr_FxSxz_B2_avg[t,:])
         C3[t,:] = buildC2(corr_FxFx_B1_avg[t,:] , corr_FxFx_B2_avg[t,:])
 
-    np.savetxt('corr-SxzFx-WALLS.dat', C1)
-    np.savetxt('corr-FxSxz-WALLS.dat', C2)
-    np.savetxt('corr-FxFx-WALLS.dat' , C3)
-    np.savetxt('corr-SxzFx-WALLS-500steps.dat', C1[0:500,:])
-    np.savetxt('corr-FxSxz-WALLS-500steps.dat', C2[0:500,:])
-    np.savetxt('corr-FxFx-WALLS-500steps.dat' , C3[0:500,:])
-    np.savetxt('corr-SxzFx-WALLS-t0.dat'  , reshape_vm(C1[0,:]))
-    np.savetxt('corr-FxSxz-WALLS-t0.dat'  , reshape_vm(C2[0,:]))
-    np.savetxt('corr-FxFx-WALLS-t0.dat'   , reshape_vm(C3[0,:]))
-    np.savetxt('corr-SxzFx-WALLS-t0.2.dat', reshape_vm(C1[50,:]))
-    np.savetxt('corr-FxSxz-WALLS-t0.2.dat', reshape_vm(C2[50,:]))
-    np.savetxt('corr-FxFx-WALLS-t0.2.dat' , reshape_vm(C3[50,:]))
+    np.savetxt('SxzFx-WALLS.dat', C1)
+    np.savetxt('FxSxz-WALLS.dat', C2)
+    np.savetxt('FxFx-WALLS.dat' , C3)
+    np.savetxt('SxzFx-WALLS-500steps.dat', C1[0:500,:])
+    np.savetxt('FxSxz-WALLS-500steps.dat', C2[0:500,:])
+    np.savetxt('FxFx-WALLS-500steps.dat' , C3[0:500,:])
+    np.savetxt('SxzFx-WALLS-t0.dat'  , reshape_vm(C1[0,:]))
+    np.savetxt('FxSxz-WALLS-t0.dat'  , reshape_vm(C2[0,:]))
+    np.savetxt('FxFx-WALLS-t0.dat'   , reshape_vm(C3[0,:]))
+    np.savetxt('SxzFx-WALLS-t0.2.dat', reshape_vm(C1[50,:]))
+    np.savetxt('FxSxz-WALLS-t0.2.dat', reshape_vm(C2[50,:]))
+    np.savetxt('FxFx-WALLS-t0.2.dat' , reshape_vm(C3[50,:]))
 
 #EOF
 

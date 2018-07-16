@@ -155,13 +155,16 @@ def computeLambda(Ct,C0):
     Cbackward = reshape_vm(Ct[row-1,:])
     Cdev      = (Cforward - Cbackward) / (2 * dt)
     Cdev0     = (reshape_vm(Ct[1,:]) - reshape_vm(Ct[1,:]).T)/ (2 * dt)
-    L0        = - Cdev0
+    Cinv      = linalg.pinv(reshape_vm(Ct[row,:]), rcond = tol)
+    Cinv0     = linalg.pinv(reshape_vm(Ct[0,:]), rcond = tol)
+    L0        = -Cdev0
     Lanti     = 0.5 * (L0 - L0.T)                                                     #antisymmetric
     L         = 0.5 * (Lanti + eps.dot(Lanti.T).dot(eps))                             #onsager
-    Lambda    = - Cdev.dot((linalg.pinv(reshape_vm(Ct[row]), rcond = tol)))
+    Lambda0   = -Cdev0.dot(Cinv0)
+    Lambda    = -Cdev.dot(Cinv)
     M0        = Lambda.dot(C0) - L
     M         = 0.5 * (M0 + eps.dot(M0.T).dot(eps))                                   #onsager
-    return Lambda, M, L, Cdev0
+    return Lambda, Lambda0, M, L, Cdev0
 
 #Frobenious norm error
 def frobenious(A,B):
@@ -353,9 +356,10 @@ elif theory == 2:
         C0                = np.loadtxt('C0-gxTh')
         #LambdaMovie       = np.zeros((int(round((tstop-tstart)/tdump)),nNodes**2))
         #LambdaAproxMovie  = np.zeros((int(round((tstop-tstart)/tdump)),nNodes**2))
+        """ 
         i=0
         for tau in np.arange(tstart, tstop, tdump):
-            Lambda, M, L, Cdev0 = computeLambda(Ct,C0)
+            Lambda, Lambda0, M, L, Cdev0 = computeLambda(Ct,C0)
             #Lambda0, Lambda1  = computeLambdaAprox(Ct,C0)
             ##Movie
             #LambdaMovie[i,:]      = reshape_mv(Lambda)
@@ -368,7 +372,24 @@ elif theory == 2:
             i+=1
         #np.savetxt('LambdaMovie', LambdaMovie)
         #np.savetxt('LambdaAproxMovie', LambdaAproxMovie)
+        """
+        Lambdat = np.zeros((500, nNodes**2))
+        for tau in np.arange(0,0.996,dt):
+            Lambda, Lambda0, M, L, Cdev0 = computeLambda(Ct,C0)
+            row= int(round(tau/dt))
+            Lambdat[row,:] = reshape_mv(Lambda)
+        Lambdat[0,:] = reshape_mv(Lambda0)
+        np.savetxt('Lambda-mu30nu30.dat', Lambdat[:,1769])
+        np.savetxt('Lambda-mu30nu31.dat', Lambdat[:,1770])
+        np.savetxt('Lambda-mu30nu33.dat', Lambdat[:,1772])
+        np.savetxt('Lambda-mu30nu36.dat', Lambdat[:,1775])
+        np.savetxt('Lambda-mu30nu40.dat', Lambdat[:,1779])
+        np.savetxt('Lambda-mu30nu50.dat', Lambdat[:,1789])
+        np.savetxt('Lambda-mu3nu3.dat',   Lambdat[:,122])
+        np.savetxt('Lambda-mu3nu6.dat',   Lambdat[:,125])
+
         print datetime.datetime.now(),'Lambda, M and L computed for gx theory!'
+
 #-------------------------------------------
         #LambdaAprox = np.zeros((400, nNodes**2))
         #te = 0.145
