@@ -8,7 +8,7 @@
 #------------------------------------------------------------------------------
 #                         Author   : @DiegoDZ
 #                         Date     : January  2018
-#                         Modified : March 2018
+#                         Modified : September 2018
 #                         Run      : python buildCt.py  (Run with python 2.7)
 #------------------------------------------------------------------------------
 
@@ -62,37 +62,40 @@ def reshape_mv(A):
     return B
 
 #Average blocks of correlations. Note that this subrutine is for blocks of stress tensor correlations. Stress tensor is defined in bins, so this is the reason why it does not take the last row and column. 
+#def avgBlocks(B1,B2):
+#    A = 0.5 * (reshapeBlock_vm(B1)[0:-1, 0:-1] + np.rot90(reshapeBlock_vm(B2)[0:-1, 0:-1],2))
+#    reshapeBlock_vm(B1)[0:-1, 0:-1] = A
+#    reshapeBlock_vm(B2)[0:-1, 0:-1] = np.rot90(A,2)
+#    B1avg = reshapeBlock_mv(B1)
+#    B2avg = reshapeBlock_mv(B2)
+#    return B1avg, B2avg
 def avgBlocks(B1,B2):
-    A = 0.5 * (reshapeBlock_vm(B1)[0:-1, 0:-1] + np.rot90(reshapeBlock_vm(B2)[0:-1, 0:-1],2))
-    reshapeBlock_vm(B1)[0:-1, 0:-1] = A
-    reshapeBlock_vm(B2)[0:-1, 0:-1] = np.rot90(A,2)
+    A = 0.5 * (reshapeBlock_vm(B1)[:-1,:-1] + np.rot90(reshapeBlock_vm(B2)[:-1,:-1],2))
+    B1 =np.zeros((nNodesBlock, nNodesBlock))
+    B2 =np.zeros((nNodesBlock, nNodesBlock))
+    B1[1:,1:]   = A
+    B2[:-1,:-1] = np.rot90(A,2)
     B1avg = reshapeBlock_mv(B1)
     B2avg = reshapeBlock_mv(B2)
     return B1avg, B2avg
 
 def avgBlocks_SxzFx(SxzFxB1, SxzFxB2, FxSxzB1, FxSxzB2):
-    B                 = np.zeros((nNodesBlock, nNodesBlock))
-    A1                = np.rot90(reshapeBlock_vm(-SxzFxB2)[:-1,:],2)
-    B[:-1,:]          = A1
-    A                 = 0.5 * (reshapeBlock_vm(SxzFxB1) + B)
-    corr_SxzFx_B1_avg = reshapeBlock_mv(A)
-    B                 = np.zeros((nNodesBlock, nNodesBlock))
-    B[:-1,:]          = -np.rot90(A[:-1,:],2)
-    corr_SxzFx_B2_avg = reshapeBlock_mv(B)
+    A = 0.5 * (reshapeBlock_vm(SxzFxB1)[:-1,:] +  np.rot90(-reshapeBlock_vm(SxzFxB2)[:-1,:],2))
+    B = np.zeros((nNodesBlock, nNodesBlock))
+    B[1:,:] = A
+    corr_SxzFx_B1_avg = B
+    corr_SxzFx_B2_avg = np.rot90(-B,2)
 
-    B                 = np.zeros((nNodesBlock, nNodesBlock))
-    A2                = np.rot90(reshapeBlock_vm(-FxSxzB2)[:,:-1],2)
-    B[:,:-1]          = A2
-    A                 = 0.5 * (reshapeBlock_vm(FxSxzB1) + B)
-    corr_FxSxz_B1_avg = reshapeBlock_mv(A)
-    B                 = np.zeros((nNodesBlock, nNodesBlock))
-    B[:,:-1]          = -np.rot90(A[:,:-1],2)
-    corr_FxSxz_B2_avg = reshapeBlock_mv(B)
+    A = 0.5 * (reshapeBlock_vm(FxSxzB1)[:,:-1] +  np.rot90(-reshapeBlock_vm(FxSxzB2)[:,:-1],2))
+    B = np.zeros((nNodesBlock, nNodesBlock))
+    B[:,1:] = A
+    corr_FxSxz_B1_avg = B
+    corr_FxSxz_B2_avg = np.rot90(-B,2)
     
-    B1avg             = 0.5 * (reshapeBlock_vm(corr_SxzFx_B1_avg) + reshapeBlock_vm(corr_FxSxz_B1_avg).T) 
-    B2avg             = 0.5 * (reshapeBlock_vm(corr_SxzFx_B2_avg) + reshapeBlock_vm(corr_FxSxz_B2_avg).T) 
+    B1avg = 0.5 * (reshapeBlock_vm(corr_SxzFx_B1_avg) + reshapeBlock_vm(corr_FxSxz_B1_avg).T) 
+    B2avg = 0.5 * (reshapeBlock_vm(corr_SxzFx_B2_avg) + reshapeBlock_vm(corr_FxSxz_B2_avg).T) 
     return B1avg, B2avg
-
+   
 #Obtain the anti-diagonal (and the next one) of a block. Before that the subrutine use all the sub-anti-diagonals to increase the stat. of the main anti-diagonal.
 def avgDiag(B):
     Davg = np.zeros(nNodesBlock)
@@ -135,6 +138,7 @@ def buildC(C, Davg, D1avg):
         for i in np.arange(nNodesBlock-1, nNodes, 1):
             C[i-k,(i+1-k)-nNodesBlock+2*k]  = Davg[k]
             C[i-k,(i-k1+2)-nNodesBlock+2*k] = D1avg[k1]
+    C[np.isnan(C)] = 0   #Queda pendiente ver los NaN's al construir C
     return C
 
 #Build matrices of correlations when the diagonal does not have to be built (<Sxz(t)Fx>, <Fx(t)Sxz> and <Fx(t)Fx>).
@@ -211,7 +215,7 @@ if SxzFx == 'y':
 
     for t in range(nSteps):
         print 'Creating blocks. Step '+ str(t+1)
-        B1 = block1[t,:].reshape(2*nNodesBlock, 2*nNodesBlock)
+        B1 = block1[t,:].reshape(2*nNodesBlock, 2*nNodesBlock)    
         B2 = block2[t,:].reshape(2*nNodesBlock, 2*nNodesBlock)
 
         corr_SxzSxz_B1[t,:] = reshapeBlock_mv(B1[0*nNodesBlock:1*nNodesBlock, 0*nNodesBlock:1*nNodesBlock])
@@ -233,8 +237,8 @@ if SxzFx == 'y':
     #np.savetxt('FxFx-WALLS-B2-t0.dat'    , reshapeBlock_vm(corr_FxFx_B2[0,:]))
     #np.savetxt('SxzSxz-WALLS-B1-t0.2.dat', reshapeBlock_vm(corr_SxzSxz_B1[50,:]))
     #np.savetxt('SxzSxz-WALLS-B2-t0.2.dat', reshapeBlock_vm(corr_SxzSxz_B2[50,:]))
-    #np.savetxt('SxzFx-WALLS-B1-t0.2.dat' , reshapeBlock_vm(corr_SxzFx_B1[50,:]))
-    #np.savetxt('SxzFx-WALLS-B2-t0.2.dat' , reshapeBlock_vm(corr_SxzFx_B2[50,:]))
+    np.savetxt('SxzFx-WALLS-B1-t0.2.dat' , reshapeBlock_vm(corr_SxzFx_B1[50,:]))
+    np.savetxt('SxzFx-WALLS-B2-t0.2.dat' , reshapeBlock_vm(corr_SxzFx_B2[50,:]))
     #np.savetxt('FxSxz-WALLS-B1-t0.2.dat' , reshapeBlock_vm(corr_FxSxz_B1[50,:]))
     #np.savetxt('FxSxz-WALLS-B2-t0.2.dat' , reshapeBlock_vm(corr_FxSxz_B2[50,:]))
     #np.savetxt('FxFx-WALLS-B1-t0.2.dat'  , reshapeBlock_vm(corr_FxFx_B1[50,:]))
@@ -255,8 +259,8 @@ if SxzFx == 'y':
         print 'Averaging blocks. Step '+ str(t+1)
         #<Sxz(t)Sxz>
         B1avg, B2avg = avgBlocks(corr_SxzSxz_B1[t,:], corr_SxzSxz_B2[t,:])
-        B1avg = reshapeBlock_mv(0.5*(reshapeBlock_vm(B1avg)+ reshapeBlock_vm(B1avg).T))   #symmetric
-        B2avg = reshapeBlock_mv(0.5*(reshapeBlock_vm(B2avg)+ reshapeBlock_vm(B2avg).T))   #symmetric
+        #B1avg = reshapeBlock_mv(0.5*(reshapeBlock_vm(B1avg)+ reshapeBlock_vm(B1avg).T))   #symmetric
+        #B2avg = reshapeBlock_mv(0.5*(reshapeBlock_vm(B2avg)+ reshapeBlock_vm(B2avg).T))   #symmetric
         corr_SxzSxz_B1_avg[t,:] = B1avg
         corr_SxzSxz_B2_avg[t,:] = B2avg
         #<Sxz(t)Fx> and <Sxz(t)Fx>
@@ -280,10 +284,10 @@ if SxzFx == 'y':
     #np.savetxt('FxFx-WALLS-B2-avg-t0.dat'    , reshapeBlock_vm(corr_FxFx_B2_avg[0,:]))
     #np.savetxt('SxzSxz-WALLS-B1-avg-t0.2.dat', reshapeBlock_vm(corr_SxzSxz_B1_avg[50,:]))
     #np.savetxt('SxzSxz-WALLS-B2-avg-t0.2.dat', reshapeBlock_vm(corr_SxzSxz_B2_avg[50,:]))
-    #np.savetxt('SxzFx-WALLS-B1-avg-t0.2.dat' , reshapeBlock_vm(corr_SxzFx_B1_avg[50,:]))
-    #np.savetxt('SxzFx-WALLS-B2-avg-t0.2.dat' , reshapeBlock_vm(corr_SxzFx_B2_avg[50,:]))
-    #np.savetxt('FxSxz-WALLS-B1-avg-t0.2.dat' , reshapeBlock_vm(corr_FxSxz_B1_avg[50,:]))
-    #np.savetxt('FxSxz-WALLS-B2-avg-t0.2.dat' , reshapeBlock_vm(corr_FxSxz_B2_avg[50,:]))
+    np.savetxt('SxzFx-WALLS-B1-avg-t0.2.dat' , reshapeBlock_vm(corr_SxzFx_B1_avg[50,:]))
+    np.savetxt('SxzFx-WALLS-B2-avg-t0.2.dat' , reshapeBlock_vm(corr_SxzFx_B2_avg[50,:]))
+    np.savetxt('FxSxz-WALLS-B1-avg-t0.2.dat' , reshapeBlock_vm(corr_FxSxz_B1_avg[50,:]))
+    np.savetxt('FxSxz-WALLS-B2-avg-t0.2.dat' , reshapeBlock_vm(corr_FxSxz_B2_avg[50,:]))
     #np.savetxt('FxFx-WALLS-B1-avg-t0.2.dat'  , reshapeBlock_vm(corr_FxFx_B1_avg[50,:]))
     #np.savetxt('FxFx-WALLS-B2-avg-t0.2.dat'  , reshapeBlock_vm(corr_FxFx_B2_avg[50,:]))
 
@@ -300,7 +304,7 @@ if SxzFx == 'y':
         Z[nNodes-nNodesBlock:nNodes, nNodes-nNodesBlock:nNodes] = B2
         Davg, D1avg                                             = avgDiag(B1)
         C[t,:]                                                  = reshape_mv(buildC(Z,Davg,D1avg))
-        
+    
     np.savetxt('SxzSxz-WALLS.dat'         , C)
     np.savetxt('SxzSxz-WALLS-500steps.dat', C[0:500])
     np.savetxt('SxzSxz-WALLS-t0.dat'      , reshape_vm(C[0,:]))
