@@ -1,11 +1,10 @@
-#################################################################################################################
-# THIS SCRIPT COMPUTES THE LAPLACE TRANSFORM OF THE MATRIX OF CORRELATIONS, C(t), AND THE SUM OF THE MATRICES L+M
+###################################
+# This script computes the Laplace transform of the matrix of correlations C(t) and the sim of the matrices L+M
 #
-# Author: @DiegoDZ
-# Date: june 2017
+# Author: DiegoDZ
+# Date: June 2017
 #
-# run: >>> python laplaceTransform.py
-#################################################################################################################
+###################################
 
 import numpy as np
 from scipy import linalg

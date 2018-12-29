@@ -1,49 +1,33 @@
 #python-scripts
 
-Important python scritps used in my doctoral thesis. 
+Important python scritps used in my doctoral thesis. Some of them were included in jupyter notebooks (Thesis/notebooks) 
 
-__average-correlations.py__  Averages the correlation functions.
 
-__average-covariances.py__ Averages the covariances. 
+__buildCt.py__ computes the matrix of covariances C(t). 
 
-__average_profiles.py__ Averages the output profiles. 
+__computeLambda.py__ computes the matrix of correlations, C(t), the matrix lambda and the predicted matrix of correlations with its error.
 
-__average-results.py__ Averages the covariances. 
+__covariance_mm.py__ computes the covariance between two input matrix. The output is a matrix.
 
-__Ct-matrix.py__ Computes the matrix of covariances C(t). 
+__covariance_mv.py__ computes the covariance between a matrix and a vector. The output is a vector.
 
-__computeLambda.py__ Computes the matrix of correlations, C(t), the matrix lambda and the predicted matrix of correlations with its error.
+__covariance_vm.py__ computes the covariance between a vector and a matrix. The output is a vector.
 
-__covariance_mm.py__ Computes the covariance between two input matrix. The output is a matrix.
+__covariance_vv.py__ computes the covariance between two input vectors. The output is a vector.
 
-__covariance_mv.py__ Computes the covariance between a matrix and a vector. The output is a vector.
+__lambda.py__ computes the matrix $\Lambda(t)$. 
 
-__covariance_vm.py__ Computes the covariance between a vector and a matrix. The output is a vector.
+__laplaceTransform.py__ computes the laplace transform of the matrix of correlations C(t).
 
-__covariance_vv.py__ Computes the covariance between two input vectors. The output is a vector.
+__movie-correlations.py__ generates a movie of correlations
 
-__deriveCt.py__ Derives the matrix of covariances C(t).
+__movie-matrices.py__ generates a movie from an input matrix
 
-__Dmatrix.py__ Computes the matrix D using the Green-Kubo kernels. 
 
-__Hmatrix.py__ Computes the inverse of matrix of covariances C. Then calculates the conjugate variables. 
+__pbc.py__ transforms a correlations files from real to Fourier space. 
 
-__Hmatrix.py__ Computes the inverse of matrix of covariances C. Then calculates the conjugate variables. 
+__reshapes.py__ changes format (vector/matrix) of an input file. 
 
-__Mmatrix_rhoegTheory.py__ Computes the matrix M using Mori'exacts Generalized Langevin Equation 
-
-__model_eTheory.py__ Computes the prediction of the evolution of the fluid energy based on a theory with fluid energy as relevant variable.
-
-__model_rhoeTheory.py__ Computes the prediction of the evolution of the fluid density and the fluid energy based on a theory with fluid density and fluid energy as relevant variables.
-
-__movie-correlations.py__ Generates a movie of correlations
-
-__movie-matrices.py__ Generates a movie from an input matrix
-
-__nodes-selection.py__ Selects the fluid nodes. 
-
-__pbc.py__ Transform a correlations files from real to Fourier space. 
-
-__projected-current.py__ Computes the projected current of some relevant variables (internal energy of the fluid, heat fluxes and time derivative of the internal energy of the fluid)
+__symmetrizer.py__  takes advange of the simmetries of an input matrix of correlations in order to increase the statistics. 
 
 

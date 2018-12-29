@@ -1,9 +1,8 @@
 ##########################################################################
-#THIS SCRIPT COMPUTES THE MATRIX OF CORRELATIONS AND ITS LAPLACE TRANSFORM
+# This script computes the matrix of correlations and its laplace transform 
 ##########################################################################
-#AUTHOR: DiegoDZ
-#DATE: Jun 2017
-#RUN: >>> python CtCl.py
+#Author: DiegoDZ
+#Date: Jun 2017
 ##########################################################################
 
 ##############################

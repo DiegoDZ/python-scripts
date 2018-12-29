@@ -1,12 +1,20 @@
-#useful python functions
+###########################
+###########################
+# This script contains two subrutines: reshape_vm converts an input vector 
+# into a matrix, and reshape_mv which does the oposite. 
+#This is very useful when one has a time dependent matrix. Converting the matrix into a vector in each time step we can deal with a 2D array instead of 3D array. 
+#
+# Author: DiegoDZ
+# Date:  June 2017
+###########################
 
 import numpy as np
 
-#nBlocks = number correlations files
-#sBlocks = int(np.sqrt(nBlocks))
-#nNodes = number nodes
-#dim = sBlocks * nNodes
-#mu, nu = nodes selected
+nBlocks = XXXX
+sBlocks = int(np.sqrt(nBlocks))
+nNodes  = XXXX
+dim     = sBlocks * nNodes
+mu, nu  = XXXX 
 
 
 #Change format: vector-> matrix
@@ -17,10 +25,5 @@ def reshape_vm(A):
 #Change format: matrix-> vector
 def reshape_mv(A):
     B = A.reshape(sBlocks,nNodes,sBlocks,nNodes).swapaxes(1,2).ravel()
-    return B
-
-#Select the elements of a block matrix which correspond to the nodes mu,nu.
-def selectNodes(A, mu, nu):
-    B = np.array((A[mu,nu], A[mu,nu+nNodes], A[mu,nu+2*nNodes], A[mu+nNodes,nu], A[mu+nNodes,nu+nNodes], A[mu+nNodes,nu+2*nNodes], A[mu+2*nNodes,nu], A[mu+2*nNodes,nu+nNodes], A[mu+2*nNodes,nu+2*nNodes]))
     return B
 
