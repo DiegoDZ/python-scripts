@@ -1,4 +1,4 @@
-#python-scripts
+# Scripts used in On the non-locality of hydrodynamics near solids
 
 Python scripts used to obtain the results of __On the non-locality of hydrodynamics...__
 
