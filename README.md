@@ -1,4 +1,4 @@
-#python-scripts
+# Python scripts
 
 Important python scritps used in my doctoral thesis. Some of them were included in jupyter notebooks (Thesis/notebooks) 
 
