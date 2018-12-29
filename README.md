@@ -28,6 +28,8 @@ __pbc.py__ transforms a correlations files from real to Fourier space.
 
 __reshapes.py__ changes format (vector/matrix) of an input file. 
 
+__running-integral.py__ computes the cumulative integral of an input matrix.
+
 __symmetrizer.py__  takes advange of the simmetries of an input matrix of correlations in order to increase the statistics. 
 
 
